@@ -48,15 +48,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-    }
-    
     setIsLoading(false);
   }, []);
 
@@ -68,8 +59,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(user);
       setToken(token);
       
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Login failed');
@@ -84,8 +73,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(user);
       setToken(token);
       
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Registration failed');
@@ -95,8 +82,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
     delete api.defaults.headers.common['Authorization'];
   };
 
