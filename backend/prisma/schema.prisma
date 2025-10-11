@@ -1,0 +1,98 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  firstName String
+  lastName  String
+  password  String
+  role      UserRole @default(STUDENT)
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  createdCourses Course[]     @relation("CourseCreator")
+  enrollments    Enrollment[]
+  lessons        Lesson[]     @relation("LessonCreator")
+
+  @@map("users")
+}
+
+model Course {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
+  thumbnail   String?
+  isPublished Boolean @default(false)
+  price       Float   @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  creatorId   String
+  creator     User         @relation("CourseCreator", fields: [creatorId], references: [id])
+  lessons     Lesson[]
+  enrollments Enrollment[]
+
+  @@map("courses")
+}
+
+model Lesson {
+  id          String  @id @default(cuid())
+  title       String
+  content     String?
+  videoUrl    String?
+  duration    Int?    // in minutes
+  order       Int     @default(0)
+  isPublished Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  courseId  String
+  course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  creatorId String
+  creator   User   @relation("LessonCreator", fields: [creatorId], references: [id])
+
+  @@map("lessons")
+}
+
+model Enrollment {
+  id        String           @id @default(cuid())
+  status    EnrollmentStatus @default(ACTIVE)
+  progress  Float            @default(0) // percentage 0-100
+  enrolledAt DateTime        @default(now())
+  completedAt DateTime?
+
+  // Relations
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}

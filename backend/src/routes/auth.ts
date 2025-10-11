@@ -1,0 +1,116 @@
+import express from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { body } from 'express-validator';
+import { prisma } from '../index';
+import { sendResponse, handleValidationErrors, asyncHandler } from '../utils/response';
+
+const router = express.Router();
+
+// Register
+router.post(
+  '/register',
+  [
+    body('email').isEmail().normalizeEmail(),
+    body('firstName').trim().isLength({ min: 1 }).escape(),
+    body('lastName').trim().isLength({ min: 1 }).escape(),
+    body('password').isLength({ min: 6 }),
+    body('role').optional().isIn(['STUDENT', 'TEACHER', 'ADMIN']),
+  ],
+  asyncHandler(async (req: express.Request, res: express.Response) => {
+    if (handleValidationErrors(req, res)) return;
+
+    const { email, firstName, lastName, password, role = 'STUDENT' } = req.body;
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      return sendResponse(res, 400, null, 'User already exists with this email');
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    const user = await prisma.user.create({
+      data: {
+        email,
+        firstName,
+        lastName,
+        password: hashedPassword,
+        role,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+
+    // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is not defined');
+    }
+    
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      jwtSecret
+    );
+
+    return sendResponse(res, 201, { user, token }, undefined);
+  })
+);
+
+// Login
+router.post(
+  '/login',
+  [
+    body('email').isEmail().normalizeEmail(),
+    body('password').isLength({ min: 1 }),
+  ],
+  asyncHandler(async (req: express.Request, res: express.Response) => {
+    if (handleValidationErrors(req, res)) return;
+
+    const { email, password } = req.body;
+
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return sendResponse(res, 401, null, 'Invalid credentials');
+    }
+
+    // Check password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return sendResponse(res, 401, null, 'Invalid credentials');
+    }
+
+    // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is not defined');
+    }
+    
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      jwtSecret
+    );
+
+    // Return user without password
+    const { password: _, ...userWithoutPassword } = user;
+
+    return sendResponse(res, 200, { user: userWithoutPassword, token }, undefined);
+  })
+);
+
+export default router;
