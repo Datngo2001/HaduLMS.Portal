@@ -1,16 +1,16 @@
-import express from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
+import express from 'express';
+import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
+import { PrismaClient } from '../prisma-generated/client';
 import { getDatabaseConfig } from './config/database';
 
 // Import routes
 import authRoutes from './routes/auth';
-import userRoutes from './routes/users';
 import courseRoutes from './routes/courses';
 import lessonRoutes from './routes/lessons';
+import userRoutes from './routes/users';
 
 // Load environment variables
 dotenv.config();

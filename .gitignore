@@ -128,3 +128,4 @@ uploads/
 prisma/migrations/
 !prisma/schema.prisma
 !prisma/seed.ts
+backend/prisma-generated/

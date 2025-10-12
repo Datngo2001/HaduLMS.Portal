@@ -9,7 +9,6 @@
     "start": "node dist/index.js",
     "setup": "npm install",
     "postinstall": "npx prisma generate",
-    "prestart": "npx prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
