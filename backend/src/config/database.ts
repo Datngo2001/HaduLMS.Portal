@@ -24,7 +24,7 @@ export async function getDatabaseConfig(): Promise<DatabaseConfig> {
       
       if (tokenResponse?.token) {
         // Build connection string with access token
-        const connectionString = `sqlserver://${azureSqlServer};database=${azureSqlDatabase};encrypt=true;trustServerCertificate=false;accessToken=${tokenResponse.token}`;
+        const connectionString = `sqlserver://${azureSqlServer};database=${azureSqlDatabase};encrypt=true;trustServerCertificate=true;authentication=ActiveDirectoryMsi;accessToken=${tokenResponse.token}`;
         
         return {
           connectionString,
