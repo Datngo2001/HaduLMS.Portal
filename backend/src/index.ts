@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import { getDatabaseConfig } from './config/database';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -14,8 +15,8 @@ import lessonRoutes from './routes/lessons';
 // Load environment variables
 dotenv.config();
 
-// Initialize Prisma Client
-export const prisma = new PrismaClient();
+// Initialize Prisma Client (will be configured after database config is loaded)
+export let prisma: PrismaClient;
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -83,18 +84,44 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('🔄 Shutting down gracefully...');
-  await prisma.$disconnect();
+  await prisma?.$disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log('🔄 Shutting down gracefully...');
-  await prisma.$disconnect();
+  await prisma?.$disconnect();
   process.exit(0);
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 API available at: http://localhost:${PORT}/api`);
-});
+// Initialize database and start server
+async function startServer() {
+  try {
+    // Configure database connection
+    const dbConfig = await getDatabaseConfig();
+    console.log(`🗄️  Database type: ${dbConfig.isAzure ? 'Azure SQL (Managed Identity)' : 'Local SQL Server'}`);
+    
+    // Initialize Prisma with the configured connection
+    if (dbConfig.isAzure) {
+      // For Azure, we need to update the DATABASE_URL environment variable
+      process.env.DATABASE_URL = dbConfig.connectionString;
+    }
+    
+    prisma = new PrismaClient();
+    
+    // Test the database connection
+    await prisma.$connect();
+    console.log('✅ Database connected successfully');
+    
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🌐 API available at: http://localhost:${PORT}/api`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();

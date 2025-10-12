@@ -1,0 +1,16 @@
+{
+  "recommendations": [
+    "ms-vscode.vscode-typescript-next",
+    "bradlc.vscode-tailwindcss",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-eslint",
+    "Prisma.prisma",
+    "ms-vscode.vscode-json",
+    "christian-kohler.path-intellisense",
+    "ms-vscode.vscode-node-azure-pack",
+    "ms-dotnettools.vscode-dotnet-runtime",
+    "formulahendry.auto-rename-tag",
+    "streetsidesoftware.code-spell-checker",
+    "ms-vscode.powershell"
+  ]
+}
