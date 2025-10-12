@@ -56,12 +56,12 @@ Connect to your Azure SQL Database and run:
 
 ```sql
 -- Create a user for the managed identity
-CREATE USER [<indetity-name>] FROM EXTERNAL PROVIDER;
+CREATE USER [<user-assigned-indetity-name>] FROM EXTERNAL PROVIDER;
 
 -- Grant appropriate permissions
-ALTER ROLE db_datareader ADD MEMBER [<indetity-name>];
-ALTER ROLE db_datawriter ADD MEMBER [<indetity-name>];
-ALTER ROLE db_ddladmin ADD MEMBER [<indetity-name>];
+ALTER ROLE db_datareader ADD MEMBER [<user-assigned-indetity-name>];
+ALTER ROLE db_datawriter ADD MEMBER [<user-assigned-indetity-name>];
+ALTER ROLE db_ddladmin ADD MEMBER [<user-assigned-indetity-name>];
 ```
 
 ### 3. Connection String Format
