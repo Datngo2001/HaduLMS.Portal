@@ -19,18 +19,13 @@ export async function getDatabaseConfig(): Promise<DatabaseConfig> {
       // Initialize Azure credential for Managed Identity
       const credential = new DefaultAzureCredential();
       
-      // Get access token for Azure SQL Database
-      const tokenResponse = await credential.getToken('https://database.windows.net/');
+      // Build connection string with access token
+      const connectionString = `sqlserver://${azureSqlServer};database=${azureSqlDatabase};encrypt=true;trustServerCertificate=true;authentication=ActiveDirectoryMsi`;
       
-      if (tokenResponse?.token) {
-        // Build connection string with access token
-        const connectionString = `sqlserver://${azureSqlServer};database=${azureSqlDatabase};encrypt=true;trustServerCertificate=true;authentication=ActiveDirectoryMsi;accessToken=${tokenResponse.token}`;
-        
-        return {
-          connectionString,
-          isAzure: true
-        };
-      }
+      return {
+        connectionString,
+        isAzure: true
+      };
     } catch (error) {
       console.error('Failed to get Azure access token:', error);
       throw new Error('Unable to authenticate with Azure SQL Database using Managed Identity');
