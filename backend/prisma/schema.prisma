@@ -6,20 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlserver"
   url      = env("DATABASE_URL")
-}
-
-enum UserRole {
-  ADMIN
-  TEACHER
-  STUDENT
-}
-
-enum EnrollmentStatus {
-  ACTIVE
-  COMPLETED
-  DROPPED
 }
 
 model User {
@@ -28,7 +16,7 @@ model User {
   firstName String
   lastName  String
   password  String
-  role      UserRole @default(STUDENT)
+  role      String   @default("STUDENT") // ADMIN, TEACHER, STUDENT
   avatar    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -75,21 +63,21 @@ model Lesson {
   courseId  String
   course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
   creatorId String
-  creator   User   @relation("LessonCreator", fields: [creatorId], references: [id])
+  creator   User   @relation("LessonCreator", fields: [creatorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("lessons")
 }
 
 model Enrollment {
   id        String           @id @default(cuid())
-  status    EnrollmentStatus @default(ACTIVE)
+  status    String           @default("ACTIVE") // ACTIVE, COMPLETED, DROPPED
   progress  Float            @default(0) // percentage 0-100
   enrolledAt DateTime        @default(now())
   completedAt DateTime?
 
   // Relations
   userId   String
-  user     User   @relation(fields: [userId], references: [id])
+  user     User   @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   courseId String
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
