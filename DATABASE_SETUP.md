@@ -44,12 +44,15 @@ CREATE USER [hadu_lms_user] FOR LOGIN [hadu_lms_user];
 
 -- Grant necessary permissions (adjust based on your needs)
 -- Option 1: Grant db_owner role (full database access) - Use for development only
--- ALTER ROLE db_owner ADD MEMBER [hadu_lms_user];
+ALTER ROLE db_owner ADD MEMBER [hadu_lms_user];
 
 -- Option 2: Grant specific permissions (more secure - recommended for production)
 ALTER ROLE db_datareader ADD MEMBER [hadu_lms_user];
 ALTER ROLE db_datawriter ADD MEMBER [hadu_lms_user];
 GRANT EXECUTE TO [hadu_lms_user];
+
+-- Option 3: for making schema change
+ALTER ROLE db_ddladmin ADD MEMBER [hadu_lms_user];
 
 -- Additional permissions for schema modifications (needed for migrations)
 GRANT CREATE TABLE TO [hadu_lms_user];
