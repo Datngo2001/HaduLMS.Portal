@@ -4,7 +4,6 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { PrismaClient } from '../prisma-generated/client';
-import { getDatabaseConfig } from './config/database';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -96,17 +95,7 @@ process.on('SIGTERM', async () => {
 
 // Initialize database and start server
 async function startServer() {
-  try {
-    // Configure database connection
-    const dbConfig = await getDatabaseConfig();
-    console.log(`🗄️  Database type: ${dbConfig.isAzure ? 'Azure SQL (Managed Identity)' : 'Local SQL Server'}`);
-    
-    // Initialize Prisma with the configured connection
-    if (dbConfig.isAzure) {
-      // For Azure, we need to update the DATABASE_URL environment variable
-      process.env.DATABASE_URL = dbConfig.connectionString;
-    }
-    
+  try {    
     prisma = new PrismaClient();
     
     // Test the database connection
