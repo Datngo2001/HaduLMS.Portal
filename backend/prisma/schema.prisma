@@ -19,13 +19,16 @@ model User {
   password  String
   role      String   @default("STUDENT") // ADMIN, TEACHER, STUDENT
   avatar    String?
+  faceId    String?  // Azure Face API person ID
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  createdCourses Course[]     @relation("CourseCreator")
-  enrollments    Enrollment[]
-  lessons        Lesson[]     @relation("LessonCreator")
+  createdCourses   Course[]           @relation("CourseCreator")
+  enrollments      Enrollment[]
+  lessons          Lesson[]           @relation("LessonCreator")
+  attendances      Attendance[]
+  teachingSessions ClassroomSession[] @relation("SessionTeacher")
 
   @@map("users")
 }
@@ -45,6 +48,7 @@ model Course {
   creator     User         @relation("CourseCreator", fields: [creatorId], references: [id])
   lessons     Lesson[]
   enrollments Enrollment[]
+  sessions    ClassroomSession[]
 
   @@map("courses")
 }
@@ -84,4 +88,60 @@ model Enrollment {
 
   @@unique([userId, courseId])
   @@map("enrollments")
+}
+
+model Classroom {
+  id          String   @id @default(cuid())
+  name        String
+  location    String?
+  capacity    Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  sessions    ClassroomSession[]
+
+  @@map("classrooms")
+}
+
+model ClassroomSession {
+  id          String   @id @default(cuid())
+  title       String
+  startTime   DateTime
+  endTime     DateTime
+  isActive    Boolean  @default(false)
+  checkinCode String?  // Optional QR code for backup check-in
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  classroomId String
+  classroom   Classroom    @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  courseId    String?
+  course      Course?      @relation(fields: [courseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  teacherId   String
+  teacher     User         @relation("SessionTeacher", fields: [teacherId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attendances Attendance[]
+
+  @@map("classroom_sessions")
+}
+
+model Attendance {
+  id              String           @id @default(cuid())
+  status          String           @default("PRESENT") // PRESENT, ABSENT, LATE
+  checkinTime     DateTime?
+  checkinMethod   String?          // FACE_RECOGNITION, QR_CODE, MANUAL
+  confidence      Float?           // Face recognition confidence score
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Relations
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sessionId       String
+  session         ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sessionId])
+  @@map("attendances")
 }

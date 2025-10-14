@@ -8,6 +8,7 @@ import { PrismaClient } from "../prisma-generated/client";
 
 // Import routes
 import authRoutes from "./routes/auth";
+import attendanceRoutes from "./routes/attendance";
 import courseRoutes from "./routes/courses";
 import lessonRoutes from "./routes/lessons";
 import userRoutes from "./routes/users";
@@ -55,6 +56,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/lessons", lessonRoutes);
+app.use("/api/attendance", attendanceRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
