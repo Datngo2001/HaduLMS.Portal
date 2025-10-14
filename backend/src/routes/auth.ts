@@ -4,7 +4,11 @@ import { body } from "express-validator";
 import jwt from "jsonwebtoken";
 import fetch from "node-fetch";
 import { prisma } from "../index";
-import { AuthenticatedRequest, authenticateToken } from "../middleware/auth";
+import {
+  AuthenticatedRequest,
+  authenticateToken,
+  UserRole,
+} from "../middleware/auth";
 import {
   asyncHandler,
   handleValidationErrors,
@@ -24,75 +28,6 @@ const setAuthCookie = (res: express.Response, token: string) => {
     path: "/",
   });
 };
-
-// Register
-router.post(
-  "/register",
-  [
-    body("email").isEmail().normalizeEmail(),
-    body("firstName").trim().isLength({ min: 1 }).escape(),
-    body("lastName").trim().isLength({ min: 1 }).escape(),
-    body("password").isLength({ min: 6 }),
-    body("role").optional().isIn(["STUDENT", "TEACHER", "ADMIN"]),
-  ],
-  asyncHandler(async (req: express.Request, res: express.Response) => {
-    if (handleValidationErrors(req, res)) return;
-
-    const { email, firstName, lastName, password, role = "STUDENT" } = req.body;
-
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (existingUser) {
-      return sendResponse(
-        res,
-        400,
-        null,
-        "User already exists with this email"
-      );
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        email,
-        firstName,
-        lastName,
-        password: hashedPassword,
-        role,
-      },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        createdAt: true,
-      },
-    });
-
-    // Generate JWT token
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-      throw new Error("JWT_SECRET is not defined");
-    }
-
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      jwtSecret
-    );
-
-    // Set HTTP-only cookie
-    setAuthCookie(res, token);
-
-    return sendResponse(res, 201, { user, token }, undefined);
-  })
-);
 
 // Login
 router.post(
@@ -125,6 +60,11 @@ router.post(
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
       throw new Error("JWT_SECRET is not defined");
+    }
+
+    // Only allow ADMIN login with password
+    if (user.role !== UserRole.ADMIN) {
+      return sendResponse(res, 403, null, "Access denied");
     }
 
     const token = jwt.sign(

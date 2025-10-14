@@ -1,6 +1,5 @@
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
 import GoogleLoginButton from "../components/GoogleLoginButton";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -34,15 +33,6 @@ const Login: React.FC = () => {
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             Sign in to HaduLMS
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Or{" "}
-            <Link
-              to="/register"
-              className="font-medium text-primary-600 hover:text-primary-500"
-            >
-              create a new account
-            </Link>
-          </p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -140,15 +130,6 @@ const Login: React.FC = () => {
               }}
               disabled={isLoading}
             />
-          </div>
-
-          <div className="text-center">
-            <div className="text-sm text-gray-600">Demo accounts:</div>
-            <div className="text-xs text-gray-500 mt-1">
-              <div>Admin: admin@hadu.edu / admin123</div>
-              <div>Teacher: teacher@hadu.edu / teacher123</div>
-              <div>Student: student@hadu.edu / student123</div>
-            </div>
           </div>
         </form>
       </div>
