@@ -1,12 +1,18 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { api } from '../services/api';
+import React, {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { api } from "../services/api";
 
 export interface User {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
-  role: 'ADMIN' | 'TEACHER' | 'STUDENT';
+  role: "ADMIN" | "TEACHER" | "STUDENT";
   avatar?: string;
   createdAt: string;
 }
@@ -15,6 +21,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (accessToken: string) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
@@ -25,7 +32,7 @@ interface RegisterData {
   firstName: string;
   lastName: string;
   password: string;
-  role?: 'STUDENT' | 'TEACHER';
+  role?: "STUDENT" | "TEACHER";
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,7 +40,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -53,42 +60,61 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post("/auth/login", { email, password });
       const { user, token } = response.data.data;
-      
+
       setUser(user);
       setToken(token);
-      
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     } catch (error: any) {
-      throw new Error(error.response?.data?.error || 'Login failed');
+      throw new Error(error.response?.data?.error || "Login failed");
     }
   };
 
   const register = async (userData: RegisterData) => {
     try {
-      const response = await api.post('/auth/register', userData);
+      const response = await api.post("/auth/register", userData);
       const { user, token } = response.data.data;
-      
+
       setUser(user);
       setToken(token);
-      
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     } catch (error: any) {
-      throw new Error(error.response?.data?.error || 'Registration failed');
+      throw new Error(error.response?.data?.error || "Registration failed");
+    }
+  };
+
+  const loginWithGoogle = async (accessToken: string) => {
+    try {
+      // Send the access token to backend for verification
+      const response = await api.post("/auth/google", {
+        token: accessToken,
+      });
+
+      const { user, token } = response.data.data;
+
+      setUser(user);
+      setToken(token);
+
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error || "Google login failed");
     }
   };
 
   const logout = () => {
     setUser(null);
     setToken(null);
-    delete api.defaults.headers.common['Authorization'];
+    delete api.defaults.headers.common["Authorization"];
   };
 
   const value = {
     user,
     token,
     login,
+    loginWithGoogle,
     register,
     logout,
     isLoading,
