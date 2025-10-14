@@ -4,6 +4,7 @@ import { body } from "express-validator";
 import jwt from "jsonwebtoken";
 import fetch from "node-fetch";
 import { prisma } from "../index";
+import { AuthenticatedRequest, authenticateToken } from "../middleware/auth";
 import {
   asyncHandler,
   handleValidationErrors,
@@ -11,6 +12,18 @@ import {
 } from "../utils/response";
 
 const router = express.Router();
+
+// Helper function to set authentication cookie
+const setAuthCookie = (res: express.Response, token: string) => {
+  const isProduction = process.env.NODE_ENV === "production";
+  res.cookie("authToken", token, {
+    httpOnly: true, // Prevents XSS attacks by making cookie inaccessible to JavaScript
+    secure: isProduction, // Use HTTPS in production
+    sameSite: isProduction ? "none" : "lax", // CSRF protection
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: "/",
+  });
+};
 
 // Register
 router.post(
@@ -74,6 +87,9 @@ router.post(
       jwtSecret
     );
 
+    // Set HTTP-only cookie
+    setAuthCookie(res, token);
+
     return sendResponse(res, 201, { user, token }, undefined);
   })
 );
@@ -118,6 +134,9 @@ router.post(
 
     // Return user without password
     const { password: _, ...userWithoutPassword } = user;
+
+    // Set HTTP-only cookie
+    setAuthCookie(res, token);
 
     return sendResponse(
       res,
@@ -219,6 +238,9 @@ router.post(
         jwtSecret
       );
 
+      // Set HTTP-only cookie
+      setAuthCookie(res, jwtToken);
+
       return sendResponse(res, 200, { user, token: jwtToken }, undefined);
     } catch (error: any) {
       console.error("Google OAuth error:", error);
@@ -226,5 +248,52 @@ router.post(
     }
   })
 );
+
+// Get current user (for session persistence)
+router.get(
+  "/me",
+  authenticateToken,
+  async (req: AuthenticatedRequest, res: express.Response) => {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.id },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          avatar: true,
+          createdAt: true,
+        },
+      });
+
+      if (!user) {
+        return sendResponse(res, 404, null, "User not found");
+      }
+
+      return sendResponse(res, 200, { user }, undefined);
+    } catch (error) {
+      return sendResponse(res, 500, null, "Internal server error");
+    }
+  }
+);
+
+// Logout endpoint
+router.post("/logout", (req: express.Request, res: express.Response) => {
+  res.clearCookie("authToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    path: "/",
+  });
+
+  return sendResponse(
+    res,
+    200,
+    { message: "Logged out successfully" },
+    undefined
+  );
+});
 
 export default router;
