@@ -593,12 +593,13 @@ router.get(
       attendances,
       summary: {
         total: attendances.length,
-        present: attendances.filter((a) => a.status === "PRESENT").length,
-        late: attendances.filter((a) => a.status === "LATE").length,
+        present: attendances.filter((a: any) => a.status === "PRESENT").length,
+        late: attendances.filter((a: any) => a.status === "LATE").length,
         faceRecognition: attendances.filter(
-          (a) => a.checkinMethod === "FACE_RECOGNITION"
+          (a: any) => a.checkinMethod === "FACE_RECOGNITION"
         ).length,
-        manual: attendances.filter((a) => a.checkinMethod === "QR_CODE").length,
+        manual: attendances.filter((a: any) => a.checkinMethod === "QR_CODE")
+          .length,
       },
     });
   })

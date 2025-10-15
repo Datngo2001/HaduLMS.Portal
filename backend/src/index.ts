@@ -1,14 +1,14 @@
+import { PrismaClient } from "@prisma/client";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
-import { PrismaClient } from "../prisma-generated/client";
 
 // Import routes
-import authRoutes from "./routes/auth";
 import attendanceRoutes from "./routes/attendance";
+import authRoutes from "./routes/auth";
 import courseRoutes from "./routes/courses";
 import lessonRoutes from "./routes/lessons";
 import userRoutes from "./routes/users";

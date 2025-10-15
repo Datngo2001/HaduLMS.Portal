@@ -33,19 +33,23 @@ hadu-lms-portal/
 ## Quick Start
 
 1. **Prerequisites**
+
    - Node.js 18+ and npm 9+
    - PostgreSQL database
 
 2. **Installation**
+
    ```bash
    npm run setup
    ```
 
 3. **Environment Setup**
+
    - Copy `.env.example` to `.env` in the backend folder
    - Update database connection string and JWT secret
 
 4. **Database Setup**
+
    ```bash
    cd backend
    npx prisma migrate dev
@@ -53,6 +57,7 @@ hadu-lms-portal/
    ```
 
 5. **Development**
+
    ```bash
    npm run dev
    ```
@@ -64,7 +69,7 @@ hadu-lms-portal/
 After seeding the database:
 
 - **Admin**: admin@hadu.edu / admin123
-- **Teacher**: teacher@hadu.edu / teacher123  
+- **Teacher**: teacher@hadu.edu / teacher123
 - **Student**: student@hadu.edu / student123
 
 ## API Documentation
@@ -81,11 +86,22 @@ The backend API provides the following endpoints:
 
 ## Development Commands
 
+### Local Development (Traditional)
+
 - `npm run dev` - Start both frontend and backend in development mode
 - `npm run build` - Build both applications for production
 - `npm run start` - Start production server
 - `npm run dev:frontend` - Start only frontend
 - `npm run dev:backend` - Start only backend
+
+### Docker Development
+
+- `docker-compose up -d` - Start all services with Docker
+- `docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d` - Start with development configuration
+- `docker-compose logs -f` - View logs from all services
+- `docker-compose down` - Stop all services
+
+See [Docker Setup Guide](DOCKER_README.md) for detailed Docker instructions.
 
 ## Contributing
 

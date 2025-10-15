@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      args:
+        NODE_ENV: development
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - /app/dist
+    command: ["npm", "run", "dev:docker"]
+    ports:
+      - "3001:3001"
+      - "9229:9229" # Debug port for Node.js
+
+  face-recognition-service:
+    environment:
+      - DEBUG=true
+    volumes:
+      - ./face-service:/app
+      - /app/__pycache__
