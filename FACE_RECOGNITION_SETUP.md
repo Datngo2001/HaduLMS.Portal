@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide will help you complete the setup of face recognition functionality for classroom check-ins in your HaduLMS project.
+This guide will help you complete the setup of face recognition functionality for classroom check-ins in your HaduLMS project using the Python-based face recognition service.
 
 ## 🚀 Implementation Status
 
@@ -14,38 +14,82 @@ This guide will help you complete the setup of face recognition functionality fo
 - Frontend pages for face registration and classroom check-in
 - Prisma migration applied successfully
 - Required dependencies installed
+- Python face recognition service implemented
 
-## 📋 Next Steps to Complete Setup
+## 📋 Setup Instructions
 
-### 1. Azure Face API Setup
+### 1. Python Face Recognition Service Setup
 
-1. **Create Azure Face API Resource:**
+**Prerequisites:**
+
+- Python 3.8 or higher
+- CMake (for dlib compilation)
+- Visual Studio Build Tools (Windows) or build-essential (Linux)
+
+**Setup Steps:**
+
+1. **Navigate to Python service directory:**
 
    ```bash
-   # Using Azure CLI (if you have it installed)
-   az cognitiveservices account create \
-     --name hadu-lms-face-api \
-     --resource-group your-resource-group \
-     --kind Face \
-     --sku F0 \
-     --location eastus
+   cd face-service
    ```
 
-   Or create manually in Azure Portal:
+2. **Run the automated setup:**
 
-   - Go to Azure Portal → Create Resource → AI + Machine Learning → Face
-   - Choose F0 (free tier) for testing
-   - Note down the endpoint URL and API key
+   ```bash
+   # Windows
+   setup-windows.bat
 
-2. **Update Environment Variables:**
-   Add these to your `backend/.env` file:
-   ```env
-   AZURE_FACE_API_KEY=your_actual_api_key
-   AZURE_FACE_API_ENDPOINT=https://your-region.api.cognitive.microsoft.com/
-   AZURE_FACE_PERSON_GROUP_ID=hadu_lms_students
+   # Linux/macOS
+   python setup.py
    ```
 
-### 2. Update Profile Page (Optional)
+3. **Start the Python service:**
+
+   ```bash
+   # Development
+   python main.py
+
+   # Or use the convenience script
+   start-python-service.bat  # Windows
+   ```
+
+4. **Verify the service is running:**
+
+   ```bash
+   curl http://localhost:8001/health
+   ```
+
+   The service API documentation is available at: http://localhost:8001/docs
+
+**Manual Setup (if automated setup fails):**
+
+1. **Install Python dependencies:**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Create environment file:**
+
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Start the service:**
+   ```bash
+   uvicorn main:app --host 0.0.0.0 --port 8001
+   ```
+
+### 2. Backend Configuration
+
+The backend is already configured to use the Python face recognition service. Make sure your `backend/.env` file contains:
+
+```env
+PYTHON_FACE_SERVICE_URL=http://localhost:8001
+```
+
+### 3. Update Profile Page (Optional)
 
 Add a link to face registration in your profile page:
 
@@ -59,7 +103,7 @@ Add a link to face registration in your profile page:
 </Link>
 ```
 
-### 3. Teacher Dashboard for Session Management
+### 4. Teacher Dashboard for Session Management
 
 Consider creating a teacher dashboard to:
 
@@ -67,23 +111,30 @@ Consider creating a teacher dashboard to:
 - View attendance reports
 - Generate check-in codes
 
-### 4. Testing the Implementation
+### 5. Testing the Implementation
 
-1. **Start the backend server:**
+1. **Start the Python service:**
+
+   ```bash
+   cd face-service
+   python main.py
+   ```
+
+2. **Start the backend server:**
 
    ```bash
    cd backend
    npm run dev
    ```
 
-2. **Start the frontend server:**
+3. **Start the frontend server:**
 
    ```bash
    cd frontend
    npm run dev
    ```
 
-3. **Test the workflow:**
+4. **Test the workflow:**
    - Register as a student
    - Go to `/face-registration` to register your face
    - Create a classroom session (you'll need to add this to teacher interface)
@@ -156,20 +207,22 @@ const checkin = async (sessionId: string, imageBase64: string) => {
 
 ## 🔒 Security Features
 
-- Face patterns stored securely, not actual images
-- Confidence scoring for recognition accuracy
+- Face encodings stored locally, not actual images
+- High accuracy face recognition using dlib models
 - Backup manual check-in with codes
 - Session time validation
 - User authentication required
 - Rate limiting on API endpoints
+- No external API dependencies for face data
 
 ## 💰 Cost Estimation
 
-For 1,000 students checking in 5 days/week:
+Using the Python face recognition service:
 
-- **Monthly API calls:** ~43,300 (including registration)
-- **Cost:** ~$23-30/month after free tier
-- **Annual cost:** ~$280
+- **Cost:** FREE (no external API costs)
+- **Infrastructure:** Only your server hosting costs
+- **Storage:** Minimal (face encodings are small files)
+- **Scalability:** Scales with your server capacity
 
 ## 🛠️ Troubleshooting
 
@@ -177,14 +230,38 @@ For 1,000 students checking in 5 days/week:
 
 1. **Camera not working:** Check browser permissions
 2. **Face not recognized:** Ensure good lighting and clear face view
-3. **API errors:** Verify Azure Face API credentials
-4. **Database errors:** Ensure migration was successful
+3. **Python service not starting:** Check if CMake and build tools are installed
+4. **Service connection errors:** Verify Python service is running on port 8001
+5. **Database errors:** Ensure migration was successful
+
+### Python Service Issues:
+
+1. **CMake not found:**
+
+   ```bash
+   # Windows
+   choco install cmake
+
+   # Linux
+   sudo apt-get install cmake build-essential
+
+   # macOS
+   brew install cmake
+   ```
+
+2. **dlib compilation fails:** Install Visual Studio Build Tools (Windows) or build-essential (Linux)
+
+3. **Service health check:**
+   ```bash
+   curl http://localhost:8001/health
+   python test_service.py
+   ```
 
 ### Error Handling:
 
 - Graceful fallback to manual check-in
 - Clear error messages for users
-- Logging for debugging
+- Comprehensive logging for debugging
 
 ## 🔄 Next Steps for Production
 
@@ -194,14 +271,17 @@ For 1,000 students checking in 5 days/week:
 4. **Create teacher dashboard**
 5. **Add notification system**
 6. **Implement attendance reports**
+7. **Setup Docker deployment for Python service**
+8. **Configure reverse proxy (nginx) for production**
 
 ## 📧 Support
 
 For issues with this implementation, check:
 
-1. Backend logs for API errors
-2. Browser console for frontend errors
-3. Azure Face API quotas and usage
+1. Python service logs for face recognition errors
+2. Backend logs for API errors
+3. Browser console for frontend errors
 4. Database connection and migrations
+5. Python service health endpoint: http://localhost:8001/health
 
 The implementation is now ready for testing! 🎉

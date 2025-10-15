@@ -2,19 +2,19 @@ import express from "express";
 import { body, param } from "express-validator";
 import { prisma } from "../index";
 import {
+  AuthenticatedRequest,
   authenticateToken,
   requireTeacher,
-  AuthenticatedRequest,
 } from "../middleware/auth";
+import { FaceRecognitionFactory } from "../services/faceRecognitionFactory";
 import {
-  sendResponse,
-  handleValidationErrors,
   asyncHandler,
+  handleValidationErrors,
+  sendResponse,
 } from "../utils/response";
-import { FaceRecognitionService } from "../services/faceRecognitionService";
 
 const router = express.Router();
-const faceService = new FaceRecognitionService();
+const faceService = FaceRecognitionFactory.getService();
 
 // Register user face for recognition
 router.post(
@@ -324,7 +324,7 @@ router.post(
 
     const { sessionId } = req.params;
     const { image } = req.body;
-
+    console.log("Session ID:", sessionId);
     // Check if session exists and is active
     const session = await prisma.classroomSession.findUnique({
       where: { id: sessionId },
@@ -337,6 +337,8 @@ router.post(
         },
       },
     });
+
+    console.log("Session details:", session);
 
     if (!session || !session.isActive) {
       return sendResponse(res, 404, null, "Session not found or inactive");
