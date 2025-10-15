@@ -5,7 +5,9 @@ export class PythonFaceRecognitionService {
 
   constructor() {
     this.serviceUrl =
-      process.env.PYTHON_FACE_SERVICE_URL || "http://localhost:8001";
+      process.env.FACE_RECOGNITION_SERVICE_URL ||
+      process.env.PYTHON_FACE_SERVICE_URL ||
+      "http://localhost:8001";
   }
 
   private async makeRequest(endpoint: string, method: string, data?: any) {

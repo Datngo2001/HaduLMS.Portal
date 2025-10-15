@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -26,13 +26,16 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Add CORS middleware
+# Add CORS middleware - restrict to backend only
+allowed_hosts = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
+allowed_origins = [f"http://{host.strip()}:3001" for host in allowed_hosts] + ["http://localhost:3001"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure this properly for production
+    allow_origins=allowed_origins,  # Only allow backend
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE"],  # Restrict methods
+    allow_headers=["Content-Type", "Authorization"],  # Restrict headers
 )
 
 # Initialize face recognition service
@@ -40,6 +43,40 @@ face_service = FaceRecognitionService(
     face_encodings_dir=os.getenv("FACE_ENCODINGS_DIR", "./face_encodings"),
     confidence_threshold=float(os.getenv("CONFIDENCE_THRESHOLD", "0.6"))
 )
+
+# Security middleware to validate requests
+@app.middleware("http")
+async def validate_request_source(request: Request, call_next):
+    """Validate that requests come from allowed sources only."""
+    
+    # Allow health checks from anywhere (for Docker healthcheck)
+    if request.url.path == "/health":
+        response = await call_next(request)
+        return response
+    
+    # Get client IP and host header
+    client_host = request.client.host if request.client else "unknown"
+    host_header = request.headers.get("host", "")
+    
+    # Get allowed hosts from environment
+    allowed_hosts = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
+    allowed_hosts = [host.strip() for host in allowed_hosts] + ["localhost", "127.0.0.1"]
+    
+    # Check if request comes from Docker network (backend service)
+    is_docker_internal = any(
+        client_host.startswith(prefix) for prefix in ["172.", "10.", "192.168."]
+    )
+    
+    # Allow requests from Docker internal network or localhost
+    if is_docker_internal or client_host in allowed_hosts:
+        response = await call_next(request)
+        return response
+    
+    logger.warning(f"Rejected request from unauthorized source: {client_host}, host: {host_header}")
+    raise HTTPException(
+        status_code=403, 
+        detail="Access denied. This service is only accessible from authorized sources."
+    )
 
 # Pydantic models
 class RegisterFaceRequest(BaseModel):
