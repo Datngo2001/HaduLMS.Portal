@@ -1,8 +1,8 @@
 import { Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { debounce } from "../services/_api";
-import { classroomAPI, type Classroom } from "../services/classrooms";
+import { debounce } from "../../services/_api";
+import { classroomAPI, type Classroom } from "../../services/classrooms";
 
 const Classrooms: React.FC = () => {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
@@ -200,9 +200,12 @@ const Classrooms: React.FC = () => {
                   {classrooms.map((classroom) => (
                     <tr key={classroom.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
+                        <Link
+                          to={`/classrooms/${classroom.id}`}
+                          className="text-sm font-medium text-indigo-600 hover:text-indigo-900"
+                        >
                           {classroom.name}
-                        </div>
+                        </Link>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">

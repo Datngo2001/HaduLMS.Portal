@@ -3,7 +3,10 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout/Layout";
 import { useAuth } from "./contexts/AuthContext";
 import ClassroomCheckin from "./pages/ClassroomCheckin";
-import Classrooms from "./pages/Classrooms";
+import ClassroomDetail from "./pages/Classrooms/ClassroomDetail";
+import Classrooms from "./pages/Classrooms/Classrooms";
+import CreateClassroom from "./pages/Classrooms/CreateClassroom";
+import EditClassroom from "./pages/Classrooms/EditClassroom";
 import CourseDetail from "./pages/CourseDetail";
 import Courses from "./pages/Courses";
 import Dashboard from "./pages/Dashboard";
@@ -43,6 +46,9 @@ const App: React.FC = () => {
         <Route path="/courses/:id" element={<CourseDetail />} />
         <Route path="/users" element={<Users />} />
         <Route path="/classrooms" element={<Classrooms />} />
+        <Route path="/classrooms/new" element={<CreateClassroom />} />
+        <Route path="/classrooms/:id" element={<ClassroomDetail />} />
+        <Route path="/classrooms/:id/edit" element={<EditClassroom />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/face-registration" element={<FaceRegistration />} />
         <Route path="/checkin/:sessionId" element={<ClassroomCheckin />} />
