@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  BarChart3,
   Calendar,
   Edit,
   MapPin,
@@ -15,7 +16,7 @@ import {
   type Classroom,
   type User,
 } from "../../services/classrooms";
-import ClassroomSessions from "./components/ClassroomSessions";
+import { ClassroomAttendance, ClassroomSessions } from "./components";
 
 const ClassroomDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +28,9 @@ const ClassroomDetail: React.FC = () => {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [assignLoading, setAssignLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "sessions" | "attendance" | "students"
+  >("sessions");
 
   useEffect(() => {
     if (id) {
@@ -285,97 +289,147 @@ const ClassroomDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Sessions Section */}
-      <ClassroomSessions
-        classroomId={classroom.id}
-        totalStudents={classroom.students?.length || 0}
-      />
-
-      {/* Students Section */}
-      <div className="mt-8 bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">
-              Students ({classroom.students?.length || 0})
-            </h3>
+      {/* Tab Navigation */}
+      <div className="mt-8">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
             <button
-              onClick={openAssignModal}
-              className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              onClick={() => setActiveTab("sessions")}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "sessions"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
             >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Assign Students
+              <Calendar className="h-5 w-5 inline mr-2" />
+              Sessions ({classroom.sessions?.length || 0})
             </button>
-          </div>
-
-          {classroom.students && classroom.students.length > 0 ? (
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="relative px-6 py-3">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {classroom.students.map((student) => (
-                    <tr key={student.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {student.firstName} {student.lastName}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {student.email}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            student.isActive
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {student.isActive ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleRemoveStudent(student.id)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Remove student"
-                        >
-                          <UserX className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <Users className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">
-                No students assigned
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Get started by assigning students to this classroom.
-              </p>
-            </div>
-          )}
+            <button
+              onClick={() => setActiveTab("attendance")}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "attendance"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              <BarChart3 className="h-5 w-5 inline mr-2" />
+              Attendance
+            </button>
+            <button
+              onClick={() => setActiveTab("students")}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "students"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              <Users className="h-5 w-5 inline mr-2" />
+              Students ({classroom.students?.length || 0})
+            </button>
+          </nav>
         </div>
+      </div>
+
+      {/* Tab Content */}
+      <div className="mt-6">
+        {activeTab === "sessions" && (
+          <ClassroomSessions
+            classroomId={classroom.id}
+            totalStudents={classroom.students?.length || 0}
+          />
+        )}
+
+        {activeTab === "attendance" && (
+          <ClassroomAttendance classroomId={classroom.id} />
+        )}
+
+        {activeTab === "students" && (
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                  Students ({classroom.students?.length || 0})
+                </h3>
+                <button
+                  onClick={openAssignModal}
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Assign Students
+                </button>
+              </div>
+
+              {classroom.students && classroom.students.length > 0 ? (
+                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                  <table className="min-w-full divide-y divide-gray-300">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Email
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="relative px-6 py-3">
+                          <span className="sr-only">Actions</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {classroom.students.map((student) => (
+                        <tr key={student.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {student.firstName} {student.lastName}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {student.email}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                student.isActive
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {student.isActive ? "Active" : "Inactive"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button
+                              onClick={() => handleRemoveStudent(student.id)}
+                              className="text-red-600 hover:text-red-900"
+                              title="Remove student"
+                            >
+                              <UserX className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Users className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">
+                    No students assigned
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Get started by assigning students to this classroom.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Assign Students Modal */}

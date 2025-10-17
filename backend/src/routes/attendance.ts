@@ -617,4 +617,201 @@ router.patch(
   })
 );
 
+// Get classroom attendance overview (for teachers)
+router.get(
+  "/classrooms/:classroomId/attendance",
+  authenticateToken,
+  requireTeacher,
+  [param("classroomId").isString()],
+  asyncHandler(async (req: AuthenticatedRequest, res: express.Response) => {
+    if (handleValidationErrors(req, res)) return;
+
+    const { classroomId } = req.params;
+
+    // Verify classroom exists
+    const classroom = await prisma.classroom.findUnique({
+      where: { id: classroomId },
+      include: {
+        students: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!classroom) {
+      return sendResponse(res, 404, null, "Classroom not found");
+    }
+
+    // Get all sessions for this classroom
+    const sessions = await prisma.classroomSession.findMany({
+      where: { classroomId },
+      include: {
+        classroom: true,
+        course: {
+          select: {
+            title: true,
+          },
+        },
+        teacher: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+        attendances: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: { checkinTime: "asc" },
+        },
+      },
+      orderBy: { startTime: "desc" },
+    });
+
+    // Get standalone attendances for classroom students (attendances without sessionId)
+    const studentIds = classroom.students.map((student) => student.id);
+    const standaloneAttendances = await prisma.attendance.findMany({
+      where: {
+        userId: { in: studentIds },
+        sessionId: null, // Only standalone attendances
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { checkinTime: "desc" },
+    });
+
+    // Calculate summary statistics
+    const totalSessions = sessions.length;
+    const sessionAttendances = sessions.reduce(
+      (sum, session) => sum + session.attendances.length,
+      0
+    );
+    const totalAttendances = sessionAttendances + standaloneAttendances.length;
+    const averageAttendance =
+      totalSessions > 0 && classroom.students.length > 0
+        ? (sessionAttendances / (totalSessions * classroom.students.length)) *
+          100
+        : 0;
+
+    // Calculate top students by attendance (including both session and standalone)
+    const studentAttendanceMap = new Map<string, number>();
+
+    // Count session attendances
+    sessions.forEach((session) => {
+      session.attendances.forEach((attendance) => {
+        const currentCount = studentAttendanceMap.get(attendance.userId) || 0;
+        studentAttendanceMap.set(attendance.userId, currentCount + 1);
+      });
+    });
+
+    // Count standalone attendances
+    standaloneAttendances.forEach((attendance) => {
+      const currentCount = studentAttendanceMap.get(attendance.userId) || 0;
+      studentAttendanceMap.set(attendance.userId, currentCount + 1);
+    });
+
+    const topStudents = Array.from(studentAttendanceMap.entries())
+      .map(([userId, attendanceCount]) => {
+        const student = classroom.students.find((s) => s.id === userId);
+        if (!student) return null;
+
+        return {
+          user: {
+            id: student.id,
+            firstName: student.firstName,
+            lastName: student.lastName,
+          },
+          attendanceCount,
+          attendanceRate:
+            totalSessions > 0 ? (attendanceCount / totalSessions) * 100 : 0,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b!.attendanceCount - a!.attendanceCount)
+      .slice(0, 10); // Top 10 students
+
+    // Format sessions data
+    const sessionsData = sessions.map((session) => ({
+      session: {
+        id: session.id,
+        title: session.title,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        isActive: session.isActive,
+        classroom: {
+          id: session.classroom.id,
+          name: session.classroom.name,
+          location: session.classroom.location,
+        },
+        course: session.course ? { title: session.course.title } : null,
+        teacher: {
+          firstName: session.teacher.firstName,
+          lastName: session.teacher.lastName,
+        },
+      },
+      attendances: session.attendances,
+      summary: {
+        total: session.attendances.length,
+        present: session.attendances.filter((a) => a.status === "PRESENT")
+          .length,
+        late: session.attendances.filter((a) => a.status === "LATE").length,
+        faceRecognition: session.attendances.filter(
+          (a) =>
+            a.checkinMethod === "FACE_RECOGNITION" ||
+            a.checkinMethod === "TEACHER_ASSISTED"
+        ).length,
+        manual: session.attendances.filter((a) => a.checkinMethod === "QR_CODE")
+          .length,
+      },
+    }));
+
+    return sendResponse(res, 200, {
+      classroom: {
+        id: classroom.id,
+        name: classroom.name,
+        location: classroom.location,
+      },
+      sessions: sessionsData,
+      standaloneAttendances: standaloneAttendances.map((attendance) => ({
+        id: attendance.id,
+        userId: attendance.userId,
+        status: attendance.status,
+        checkinTime: attendance.checkinTime,
+        checkinMethod: attendance.checkinMethod,
+        confidence: attendance.confidence,
+        user: attendance.user,
+      })),
+      totalStudents: classroom.students.length,
+      overallSummary: {
+        totalSessions,
+        sessionAttendances,
+        standaloneAttendances: standaloneAttendances.length,
+        totalAttendances,
+        averageAttendance: Math.round(averageAttendance * 100) / 100,
+        topStudents,
+      },
+    });
+  })
+);
+
 export default router;
