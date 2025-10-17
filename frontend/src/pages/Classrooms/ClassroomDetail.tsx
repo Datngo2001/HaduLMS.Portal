@@ -15,6 +15,7 @@ import {
   type Classroom,
   type User,
 } from "../../services/classrooms";
+import ClassroomSessions from "./components/ClassroomSessions";
 
 const ClassroomDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -193,7 +194,7 @@ const ClassroomDetail: React.FC = () => {
       </div>
 
       {/* Classroom Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
@@ -261,10 +262,37 @@ const ClassroomDetail: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Calendar className="h-6 w-6 text-gray-400" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    Sessions
+                  </dt>
+                  <dd className="text-lg font-medium text-gray-900">
+                    {classroom.sessions?.length || 0}
+                    <span className="text-sm text-gray-500 ml-1">total</span>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Sessions Section */}
+      <ClassroomSessions
+        classroomId={classroom.id}
+        totalStudents={classroom.students?.length || 0}
+      />
+
       {/* Students Section */}
-      <div className="bg-white shadow rounded-lg">
+      <div className="mt-8 bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg leading-6 font-medium text-gray-900">

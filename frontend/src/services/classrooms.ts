@@ -26,9 +26,35 @@ export interface User {
 
 export interface ClassroomSession {
   id: string;
-  courseId: string;
+  title: string;
   startTime: string;
   endTime: string;
+  isActive: boolean;
+  checkinCode?: string;
+  createdAt: string;
+  updatedAt: string;
+  courseId?: string;
+  course?: {
+    id: string;
+    title: string;
+    description?: string;
+  };
+  teacherId: string;
+  teacher?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  attendances?: {
+    id: string;
+    studentId: string;
+    status: string;
+    checkinTime?: string;
+    checkinMethod?: string;
+  }[];
+  _count?: {
+    attendances: number;
+  };
 }
 
 export interface CreateClassroomRequest {
@@ -128,6 +154,88 @@ export const classroomAPI = {
       }
     );
     return response.data.data;
+  },
+
+  // Get classroom sessions
+  getClassroomSessions: async (
+    classroomId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      upcoming?: boolean;
+    }
+  ): Promise<{
+    sessions: ClassroomSession[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> => {
+    const response = await api.get(`/classrooms/${classroomId}/sessions`, {
+      params,
+    });
+    return response.data.data;
+  },
+
+  // Get specific classroom session
+  getClassroomSession: async (
+    classroomId: string,
+    sessionId: string
+  ): Promise<ClassroomSession> => {
+    const response = await api.get(
+      `/classrooms/${classroomId}/sessions/${sessionId}`
+    );
+    return response.data.data;
+  },
+
+  // Create classroom session
+  createClassroomSession: async (
+    classroomId: string,
+    sessionData: {
+      title: string;
+      startTime: string;
+      endTime: string;
+      teacherId: string;
+      courseId?: string;
+      checkinCode?: string;
+    }
+  ): Promise<ClassroomSession> => {
+    const response = await api.post(
+      `/classrooms/${classroomId}/sessions`,
+      sessionData
+    );
+    return response.data.data;
+  },
+
+  // Update classroom session
+  updateClassroomSession: async (
+    classroomId: string,
+    sessionId: string,
+    sessionData: {
+      title?: string;
+      startTime?: string;
+      endTime?: string;
+      teacherId?: string;
+      courseId?: string;
+      checkinCode?: string;
+      isActive?: boolean;
+    }
+  ): Promise<ClassroomSession> => {
+    const response = await api.put(
+      `/classrooms/${classroomId}/sessions/${sessionId}`,
+      sessionData
+    );
+    return response.data.data;
+  },
+
+  // Delete classroom session
+  deleteClassroomSession: async (
+    classroomId: string,
+    sessionId: string
+  ): Promise<void> => {
+    await api.delete(`/classrooms/${classroomId}/sessions/${sessionId}`);
   },
 };
 

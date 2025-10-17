@@ -45,7 +45,6 @@ export function debounce<T extends (...args: any[]) => any>(
   timeout = 300
 ) {
   let timer: NodeJS.Timeout;
-  debugger;
 
   return (...args: Parameters<T>) => {
     clearTimeout(timer);

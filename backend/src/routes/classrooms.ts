@@ -494,4 +494,451 @@ router.get(
   }
 );
 
+// GET /classrooms/:id/sessions - Get classroom sessions
+router.get("/:id/sessions", authenticateToken, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const { page = 1, limit = 10, upcoming } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    // Build where condition
+    const where: any = {
+      classroomId: id,
+    };
+
+    // Filter for upcoming sessions if requested
+    if (upcoming === "true") {
+      where.startTime = {
+        gte: new Date(),
+      };
+    }
+
+    // Get sessions with pagination
+    const [sessions, total] = await Promise.all([
+      prisma.classroomSession.findMany({
+        where,
+        skip,
+        take: Number(limit),
+        include: {
+          course: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+            },
+          },
+          teacher: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          _count: {
+            select: {
+              attendances: true,
+            },
+          },
+        },
+        orderBy: { startTime: "desc" },
+      }),
+      prisma.classroomSession.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / Number(limit));
+
+    return sendResponse(res, 200, {
+      sessions,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching classroom sessions:", error);
+    return sendResponse(res, 500, null, "Failed to fetch classroom sessions");
+  }
+});
+
+// GET /classrooms/:classroomId/sessions/:sessionId - Get specific classroom session
+router.get(
+  "/:classroomId/sessions/:sessionId",
+  authenticateToken,
+  async (req: any, res) => {
+    try {
+      const { classroomId, sessionId } = req.params;
+
+      const session = await prisma.classroomSession.findFirst({
+        where: {
+          id: sessionId,
+          classroomId,
+        },
+        include: {
+          course: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+            },
+          },
+          teacher: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          classroom: {
+            select: {
+              id: true,
+              name: true,
+              location: true,
+            },
+          },
+          attendances: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              },
+            },
+            orderBy: { checkinTime: "desc" },
+          },
+          _count: {
+            select: {
+              attendances: true,
+            },
+          },
+        },
+      });
+
+      if (!session) {
+        return sendResponse(
+          res,
+          404,
+          null,
+          "Session not found in this classroom"
+        );
+      }
+
+      return sendResponse(res, 200, session);
+    } catch (error) {
+      console.error("Error fetching classroom session:", error);
+      return sendResponse(res, 500, null, "Failed to fetch classroom session");
+    }
+  }
+);
+
+// POST /classrooms/:id/sessions - Create a new classroom session
+router.post(
+  "/:id/sessions",
+  authenticateToken,
+  requireAdmin,
+  async (req: any, res) => {
+    try {
+      const { id: classroomId } = req.params;
+      const { title, startTime, endTime, courseId, teacherId, checkinCode } =
+        req.body;
+
+      // Validate required fields
+      if (!title || !startTime || !endTime || !teacherId) {
+        return sendResponse(
+          res,
+          400,
+          null,
+          "Title, start time, end time, and teacher are required"
+        );
+      }
+
+      // Validate time range
+      const start = new Date(startTime);
+      const end = new Date(endTime);
+      if (start >= end) {
+        return sendResponse(
+          res,
+          400,
+          null,
+          "End time must be after start time"
+        );
+      }
+
+      // Check if classroom exists
+      const classroom = await prisma.classroom.findUnique({
+        where: { id: classroomId },
+      });
+
+      if (!classroom) {
+        return sendResponse(res, 404, null, "Classroom not found");
+      }
+
+      // Check if teacher exists
+      const teacher = await prisma.user.findUnique({
+        where: { id: teacherId },
+      });
+
+      if (!teacher) {
+        return sendResponse(res, 404, null, "Teacher not found");
+      }
+
+      // Check for overlapping sessions in the same classroom
+      const overlappingSessions = await prisma.classroomSession.findMany({
+        where: {
+          classroomId,
+          OR: [
+            {
+              AND: [{ startTime: { lte: start } }, { endTime: { gt: start } }],
+            },
+            {
+              AND: [{ startTime: { lt: end } }, { endTime: { gte: end } }],
+            },
+            {
+              AND: [{ startTime: { gte: start } }, { endTime: { lte: end } }],
+            },
+          ],
+        },
+      });
+
+      if (overlappingSessions.length > 0) {
+        return sendResponse(
+          res,
+          400,
+          null,
+          "Session time conflicts with existing session in this classroom"
+        );
+      }
+
+      // Create the session
+      const session = await prisma.classroomSession.create({
+        data: {
+          title,
+          startTime: start,
+          endTime: end,
+          classroomId,
+          courseId: courseId || null,
+          teacherId,
+          checkinCode: checkinCode || null,
+        },
+        include: {
+          course: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+            },
+          },
+          teacher: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          _count: {
+            select: {
+              attendances: true,
+            },
+          },
+        },
+      });
+
+      return sendResponse(res, 201, session, "Session created successfully");
+    } catch (error) {
+      console.error("Error creating classroom session:", error);
+      return sendResponse(res, 500, null, "Failed to create classroom session");
+    }
+  }
+);
+
+// PUT /classrooms/:classroomId/sessions/:sessionId - Update a classroom session
+router.put(
+  "/:classroomId/sessions/:sessionId",
+  authenticateToken,
+  requireAdmin,
+  async (req: any, res) => {
+    try {
+      const { classroomId, sessionId } = req.params;
+      const {
+        title,
+        startTime,
+        endTime,
+        courseId,
+        teacherId,
+        checkinCode,
+        isActive,
+      } = req.body;
+
+      // Check if session exists and belongs to the classroom
+      const existingSession = await prisma.classroomSession.findFirst({
+        where: {
+          id: sessionId,
+          classroomId,
+        },
+      });
+
+      if (!existingSession) {
+        return sendResponse(
+          res,
+          404,
+          null,
+          "Session not found in this classroom"
+        );
+      }
+
+      // Validate time range if provided
+      if (startTime && endTime) {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        if (start >= end) {
+          return sendResponse(
+            res,
+            400,
+            null,
+            "End time must be after start time"
+          );
+        }
+
+        // Check for overlapping sessions (excluding current session)
+        const overlappingSessions = await prisma.classroomSession.findMany({
+          where: {
+            classroomId,
+            id: { not: sessionId },
+            OR: [
+              {
+                AND: [
+                  { startTime: { lte: start } },
+                  { endTime: { gt: start } },
+                ],
+              },
+              {
+                AND: [{ startTime: { lt: end } }, { endTime: { gte: end } }],
+              },
+              {
+                AND: [{ startTime: { gte: start } }, { endTime: { lte: end } }],
+              },
+            ],
+          },
+        });
+
+        if (overlappingSessions.length > 0) {
+          return sendResponse(
+            res,
+            400,
+            null,
+            "Session time conflicts with existing session in this classroom"
+          );
+        }
+      }
+
+      // Update the session
+      const updatedSession = await prisma.classroomSession.update({
+        where: { id: sessionId },
+        data: {
+          ...(title && { title }),
+          ...(startTime && { startTime: new Date(startTime) }),
+          ...(endTime && { endTime: new Date(endTime) }),
+          ...(courseId !== undefined && { courseId: courseId || null }),
+          ...(teacherId && { teacherId }),
+          ...(checkinCode !== undefined && {
+            checkinCode: checkinCode || null,
+          }),
+          ...(isActive !== undefined && { isActive }),
+        },
+        include: {
+          course: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+            },
+          },
+          teacher: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          _count: {
+            select: {
+              attendances: true,
+            },
+          },
+        },
+      });
+
+      return sendResponse(
+        res,
+        200,
+        updatedSession,
+        "Session updated successfully"
+      );
+    } catch (error) {
+      console.error("Error updating classroom session:", error);
+      return sendResponse(res, 500, null, "Failed to update classroom session");
+    }
+  }
+);
+
+// DELETE /classrooms/:classroomId/sessions/:sessionId - Delete a classroom session
+router.delete(
+  "/:classroomId/sessions/:sessionId",
+  authenticateToken,
+  requireAdmin,
+  async (req: any, res) => {
+    try {
+      const { classroomId, sessionId } = req.params;
+
+      // Check if session exists and belongs to the classroom
+      const existingSession = await prisma.classroomSession.findFirst({
+        where: {
+          id: sessionId,
+          classroomId,
+        },
+        include: {
+          _count: {
+            select: {
+              attendances: true,
+            },
+          },
+        },
+      });
+
+      if (!existingSession) {
+        return sendResponse(
+          res,
+          404,
+          null,
+          "Session not found in this classroom"
+        );
+      }
+
+      // Check if session has attendances
+      if (existingSession._count.attendances > 0) {
+        return sendResponse(
+          res,
+          400,
+          null,
+          "Cannot delete session with existing attendance records. Please remove attendance records first."
+        );
+      }
+
+      // Delete the session
+      await prisma.classroomSession.delete({
+        where: { id: sessionId },
+      });
+
+      return sendResponse(res, 200, null, "Session deleted successfully");
+    } catch (error) {
+      console.error("Error deleting classroom session:", error);
+      return sendResponse(res, 500, null, "Failed to delete classroom session");
+    }
+  }
+);
+
 export default router;
