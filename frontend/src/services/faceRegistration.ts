@@ -11,6 +11,28 @@ export interface FaceRegistrationResponse {
   personId: string;
 }
 
+export interface TeacherCheckInResponse {
+  id: string;
+  userId: string;
+  sessionId: string;
+  status: string;
+  checkinTime: string;
+  checkinMethod: string;
+  confidence: number;
+  message: string;
+  user: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  session: {
+    title: string;
+    classroom: {
+      name: string;
+    };
+  };
+}
+
 export const faceRegistrationAPI = {
   // Register face for current user
   registerFace: async (
@@ -35,6 +57,12 @@ export const faceRegistrationAPI = {
   // Delete user's own face registration
   deleteFaceRegistration: async (): Promise<{ message: string }> => {
     const response = await api.delete("/attendance/register-face");
+    return response.data.data;
+  },
+
+  // Teacher assisted check-in (teacher checks in students)
+  teacherCheckIn: async (image: string): Promise<TeacherCheckInResponse> => {
+    const response = await api.post("/attendance/teacher-checkin", { image });
     return response.data.data;
   },
 };

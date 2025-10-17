@@ -10,7 +10,6 @@ import {
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import FaceCapture from "../components/FaceCapture";
-import { useAuth } from "../contexts/AuthContext";
 import { api } from "../services/_api";
 
 interface Session {
@@ -50,7 +49,6 @@ interface Attendance {
 const ClassroomCheckin: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const [session, setSession] = useState<Session | null>(null);
   const [attendance, setAttendance] = useState<Attendance | null>(null);
@@ -137,15 +135,6 @@ const ClassroomCheckin: React.FC = () => {
     return new Date(dateString).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
-    });
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString([], {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
     });
   };
 

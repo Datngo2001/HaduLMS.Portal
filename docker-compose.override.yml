@@ -22,3 +22,5 @@ services:
     volumes:
       - ./face-service:/app
       - /app/__pycache__
+    ports:
+      - "8001:8001"
