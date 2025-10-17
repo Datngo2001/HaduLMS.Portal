@@ -21,7 +21,10 @@ export interface User {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
+  faceId?: string;
   isActive: boolean;
+  createdAt?: string;
 }
 
 export interface ClassroomSession {
@@ -236,6 +239,32 @@ export const classroomAPI = {
     sessionId: string
   ): Promise<void> => {
     await api.delete(`/classrooms/${classroomId}/sessions/${sessionId}`);
+  },
+
+  // Search students in a classroom
+  searchStudentsInClassroom: async (
+    classroomId: string,
+    params?: {
+      search?: string;
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<{
+    students: User[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> => {
+    const response = await api.get(
+      `/classrooms/${classroomId}/search-students`,
+      {
+        params,
+      }
+    );
+    return response.data.data;
   },
 };
 

@@ -173,6 +173,10 @@ const FaceRegistration: React.FC = () => {
               <li>• You can delete your face data anytime from your profile</li>
               <li>• This enables quick check-in for classroom attendance</li>
               <li>• Backup check-in methods are always available</li>
+              <li>
+                • If you already have face data registered, it will be replaced
+                with this new registration
+              </li>
             </ul>
           </div>
 

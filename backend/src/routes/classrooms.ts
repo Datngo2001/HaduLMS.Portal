@@ -941,4 +941,82 @@ router.delete(
   }
 );
 
+// GET /classrooms/:id/search-students - Search students in a classroom
+router.get("/:id/search-students", authenticateToken, async (req: any, res) => {
+  try {
+    const { id: classroomId } = req.params;
+    const { search = "", page = 1, limit = 10 } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    // Check if classroom exists and user has access
+    const classroom = await prisma.classroom.findUnique({
+      where: { id: classroomId },
+      include: {
+        sessions: {
+          where: { teacherId: req.user.id },
+          select: { id: true },
+        },
+      },
+    });
+
+    if (!classroom) {
+      return sendResponse(res, 404, null, "Classroom not found");
+    }
+
+    // Check if user is teacher of this classroom or admin
+    if (req.user.role !== "ADMIN" && classroom.sessions.length === 0) {
+      return sendResponse(res, 403, null, "Access denied");
+    }
+
+    const where: any = {
+      classroomId: classroomId,
+      role: "STUDENT",
+      isActive: true,
+    };
+
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search } },
+        { lastName: { contains: search } },
+        { email: { contains: search } },
+        { phone: { contains: search } },
+      ];
+    }
+
+    const [students, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        skip,
+        take: Number(limit),
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          faceId: true,
+          createdAt: true,
+        },
+        orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / Number(limit));
+
+    return sendResponse(res, 200, {
+      students,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    console.error("Error searching students:", error);
+    return sendResponse(res, 500, null, "Failed to search students");
+  }
+});
+
 export default router;

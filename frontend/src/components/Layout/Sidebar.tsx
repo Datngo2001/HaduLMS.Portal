@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   School,
   User,
+  UserCheck,
   Users,
 } from "lucide-react";
 import React from "react";
@@ -29,6 +30,12 @@ const Sidebar: React.FC = () => {
       name: "Check In",
       href: "/checkin",
       icon: CheckCircle,
+      roles: ["ADMIN", "TEACHER"],
+    },
+    {
+      name: "Register Student Face",
+      href: "/teacher/face-registration",
+      icon: UserCheck,
       roles: ["ADMIN", "TEACHER"],
     },
     {

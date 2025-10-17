@@ -44,13 +44,19 @@ router.post(
         select: { faceId: true },
       });
 
+      const hadExistingFace = !!existingUser?.faceId;
       if (existingUser?.faceId) {
-        return sendResponse(
-          res,
-          400,
-          null,
-          "Face already registered. Please delete the existing face first."
-        );
+        try {
+          // Delete the existing face registration
+          await faceService.deleteUserFace(existingUser.faceId);
+          console.log(`Deleted existing face registration for user ${userId}`);
+        } catch (error) {
+          console.warn(
+            "Failed to delete existing face, continuing with registration:",
+            error
+          );
+          // Continue with registration even if deletion fails
+        }
       }
 
       const personId = await faceService.registerUserFace(userId, image);
@@ -62,7 +68,9 @@ router.post(
       });
 
       return sendResponse(res, 200, {
-        message: "Face registered successfully",
+        message: hadExistingFace
+          ? "Face registration updated successfully"
+          : "Face registered successfully",
         personId,
       });
     } catch (error: any) {
@@ -112,6 +120,107 @@ router.delete(
         500,
         null,
         error.message || "Failed to delete face registration"
+      );
+    }
+  })
+);
+
+// Register face for student (teacher only)
+router.post(
+  "/register-student-face",
+  authenticateToken,
+  requireTeacher,
+  [
+    body("studentId").notEmpty().withMessage("Student ID is required"),
+    body("image").notEmpty().withMessage("Face image is required"),
+  ],
+  asyncHandler(async (req: AuthenticatedRequest, res: express.Response) => {
+    if (handleValidationErrors(req, res)) return;
+
+    const { studentId, image } = req.body;
+    const teacherId = req.user!.id;
+
+    try {
+      // Validate image format
+      if (!faceService.isValidImageFormat(image)) {
+        return sendResponse(
+          res,
+          400,
+          null,
+          "Invalid image format. Please provide a valid base64 image."
+        );
+      }
+
+      // Check if student exists and is active
+      const student = await prisma.user.findUnique({
+        where: {
+          id: studentId,
+          role: "STUDENT",
+          isActive: true,
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          faceId: true,
+        },
+      });
+
+      if (!student) {
+        return sendResponse(
+          res,
+          404,
+          null,
+          "Student not found or is not active"
+        );
+      }
+
+      // Check if student already has a face registered
+      const hadExistingFace = !!student.faceId;
+      if (student.faceId) {
+        try {
+          // Delete the existing face registration
+          await faceService.deleteUserFace(student.faceId);
+          console.log(
+            `Deleted existing face registration for student ${studentId}`
+          );
+        } catch (error) {
+          console.warn(
+            "Failed to delete existing face, continuing with registration:",
+            error
+          );
+          // Continue with registration even if deletion fails
+        }
+      }
+
+      const personId = await faceService.registerUserFace(studentId, image);
+
+      // Update student with face ID
+      await prisma.user.update({
+        where: { id: studentId },
+        data: { faceId: personId },
+      });
+
+      return sendResponse(res, 200, {
+        message: hadExistingFace
+          ? "Student face registration updated successfully"
+          : "Student face registered successfully",
+        student: {
+          id: student.id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          email: student.email,
+        },
+        personId,
+      });
+    } catch (error: any) {
+      console.error("Student face registration error:", error);
+      return sendResponse(
+        res,
+        500,
+        null,
+        error.message || "Failed to register student face"
       );
     }
   })
@@ -562,12 +671,9 @@ router.post(
     }
 
     // Check if already checked in
-    const existingAttendance = await prisma.attendance.findUnique({
+    const existingAttendance = await prisma.attendance.findFirst({
       where: {
-        userId_sessionId: {
-          userId: req.user!.id,
-          sessionId,
-        },
+        AND: [{ userId: req.user!.id }, { sessionId: sessionId }],
       },
     });
 
@@ -774,12 +880,9 @@ router.post(
     }
 
     // Check if already checked in
-    const existingAttendance = await prisma.attendance.findUnique({
+    const existingAttendance = await prisma.attendance.findFirst({
       where: {
-        userId_sessionId: {
-          userId: req.user!.id,
-          sessionId,
-        },
+        AND: [{ userId: req.user!.id }, { sessionId: sessionId }],
       },
     });
 
