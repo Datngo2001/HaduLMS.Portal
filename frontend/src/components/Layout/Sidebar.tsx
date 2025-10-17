@@ -1,12 +1,4 @@
-import {
-  BookOpen,
-  LayoutDashboard,
-  PlusCircle,
-  School,
-  Settings,
-  User,
-  Users,
-} from "lucide-react";
+import { School, User, Users } from "lucide-react";
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -15,18 +7,18 @@ const Sidebar: React.FC = () => {
   const { user } = useAuth();
 
   const navigation = [
-    {
-      name: "Dashboard",
-      href: "/dashboard",
-      icon: LayoutDashboard,
-      roles: ["ADMIN", "TEACHER", "STUDENT"],
-    },
-    {
-      name: "Courses",
-      href: "/courses",
-      icon: BookOpen,
-      roles: ["ADMIN", "TEACHER", "STUDENT"],
-    },
+    // {
+    //   name: "Dashboard",
+    //   href: "/dashboard",
+    //   icon: LayoutDashboard,
+    //   roles: ["ADMIN", "TEACHER", "STUDENT"],
+    // },
+    // {
+    //   name: "Courses",
+    //   href: "/courses",
+    //   icon: BookOpen,
+    //   roles: ["ADMIN", "TEACHER", "STUDENT"],
+    // },
     {
       name: "Users",
       href: "/users",
@@ -39,24 +31,24 @@ const Sidebar: React.FC = () => {
       icon: School,
       roles: ["ADMIN"],
     },
-    {
-      name: "Create Course",
-      href: "/courses/create",
-      icon: PlusCircle,
-      roles: ["ADMIN", "TEACHER"],
-    },
-    {
-      name: "Profile",
-      href: "/profile",
-      icon: User,
-      roles: ["ADMIN", "TEACHER", "STUDENT"],
-    },
-    {
-      name: "Settings",
-      href: "/settings",
-      icon: Settings,
-      roles: ["ADMIN"],
-    },
+    // {
+    //   name: "Create Course",
+    //   href: "/courses/create",
+    //   icon: PlusCircle,
+    //   roles: ["ADMIN", "TEACHER"],
+    // },
+    // {
+    //   name: "Profile",
+    //   href: "/profile",
+    //   icon: User,
+    //   roles: ["ADMIN", "TEACHER", "STUDENT"],
+    // },
+    // {
+    //   name: "Settings",
+    //   href: "/settings",
+    //   icon: Settings,
+    //   roles: ["ADMIN"],
+    // },
   ];
 
   const filteredNavigation = navigation.filter((item) =>
