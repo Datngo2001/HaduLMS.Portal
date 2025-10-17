@@ -145,9 +145,9 @@ model Attendance {
   // Relations
   userId          String
   user            User             @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  sessionId       String
-  session         ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId       String?          // Made optional to allow standalone check-ins
+  session         ClassroomSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, sessionId])
+  // Removed unique constraint since we allow multiple standalone check-ins
   @@map("attendances")
 }

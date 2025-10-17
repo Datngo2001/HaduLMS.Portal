@@ -2,6 +2,7 @@ import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout/Layout";
 import { useAuth } from "./contexts/AuthContext";
+import CheckIn from "./pages/CheckIn";
 import ClassroomCheckin from "./pages/ClassroomCheckin";
 import ClassroomDetail from "./pages/Classrooms/ClassroomDetail";
 import Classrooms from "./pages/Classrooms/Classrooms";
@@ -51,6 +52,7 @@ const App: React.FC = () => {
         <Route path="/classrooms/:id/edit" element={<EditClassroom />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/face-registration" element={<FaceRegistration />} />
+        <Route path="/checkin" element={<CheckIn />} />
         <Route path="/checkin/:sessionId" element={<ClassroomCheckin />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

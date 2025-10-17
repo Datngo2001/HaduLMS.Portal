@@ -311,7 +311,216 @@ router.get(
   })
 );
 
-// Face recognition check-in
+// Get current active session for check-in (optional - can return null)
+router.get(
+  "/current-session",
+  authenticateToken,
+  asyncHandler(async (req: AuthenticatedRequest, res: express.Response) => {
+    const now = new Date();
+    const userId = req.user!.id;
+
+    // Find sessions that are currently active and the user hasn't checked in to
+    const currentSessions = await prisma.classroomSession.findMany({
+      where: {
+        isActive: true,
+        startTime: { lte: now },
+        endTime: { gte: now },
+        // Only show sessions where user hasn't already checked in
+        NOT: {
+          attendances: {
+            some: {
+              userId: userId,
+            },
+          },
+        },
+      },
+      include: {
+        classroom: true,
+        course: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+        teacher: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: { startTime: "asc" },
+    });
+
+    // Return null if no sessions found (students can still check in)
+    const session = currentSessions.length > 0 ? currentSessions[0] : null;
+    return sendResponse(res, 200, session);
+  })
+);
+
+// Face recognition check-in with automatic session detection or standalone
+router.post(
+  "/checkin",
+  authenticateToken,
+  [body("image").notEmpty().withMessage("Face image is required")],
+  asyncHandler(async (req: AuthenticatedRequest, res: express.Response) => {
+    if (handleValidationErrors(req, res)) return;
+
+    const { image } = req.body;
+    const userId = req.user!.id;
+    const now = new Date();
+
+    // Try to find current active session for this user
+    const currentSession = await prisma.classroomSession.findFirst({
+      where: {
+        isActive: true,
+        startTime: { lte: now },
+        endTime: { gte: now },
+        NOT: {
+          attendances: {
+            some: {
+              userId: userId,
+              sessionId: { not: null }, // Only check for session-based attendances
+            },
+          },
+        },
+      },
+      include: {
+        classroom: true,
+        course: {
+          select: {
+            title: true,
+          },
+        },
+      },
+    });
+
+    // Check if user has face registered
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { faceId: true, firstName: true, lastName: true },
+    });
+
+    if (!user?.faceId) {
+      return sendResponse(
+        res,
+        400,
+        null,
+        "Face not registered. Please register your face first."
+      );
+    }
+
+    try {
+      // Validate image format
+      if (!faceService.isValidImageFormat(image)) {
+        return sendResponse(res, 400, null, "Invalid image format");
+      }
+
+      // Identify face
+      const identificationResult = await faceService.identifyFace(image);
+
+      if (!identificationResult) {
+        return sendResponse(
+          res,
+          400,
+          null,
+          "Face not recognized. Please try again or use alternative check-in method."
+        );
+      }
+
+      if (identificationResult.userId !== userId) {
+        return sendResponse(
+          res,
+          400,
+          null,
+          "Face does not match authenticated user"
+        );
+      }
+
+      // Determine session and status
+      let sessionId = null;
+      let status = "PRESENT";
+      let sessionInfo = null;
+
+      if (currentSession) {
+        // If there's an active session, associate with it
+        sessionId = currentSession.id;
+        const sessionStart = new Date(currentSession.startTime);
+        const checkInTime = new Date();
+        const lateThreshold = 15; // 15 minutes late threshold
+
+        if (
+          checkInTime.getTime() - sessionStart.getTime() >
+          lateThreshold * 60 * 1000
+        ) {
+          status = "LATE";
+        }
+
+        sessionInfo = {
+          title: currentSession.title,
+          classroom: {
+            name: currentSession.classroom.name,
+          },
+        };
+      } else {
+        // Standalone check-in (no active session)
+        sessionInfo = {
+          title: "Standalone Check-in",
+          classroom: {
+            name: "General",
+          },
+        };
+      }
+
+      // Create attendance record
+      const attendance = await prisma.attendance.create({
+        data: {
+          userId,
+          sessionId, // Can be null for standalone check-ins
+          status,
+          checkinTime: new Date(),
+          checkinMethod: "FACE_RECOGNITION",
+          confidence: identificationResult.confidence,
+        },
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          session: currentSession
+            ? {
+                select: {
+                  title: true,
+                  classroom: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                },
+              }
+            : undefined,
+        },
+      });
+
+      // Add session info for response if it's a standalone check-in
+      const responseData = {
+        ...attendance,
+        session: attendance.session || sessionInfo,
+      };
+
+      return sendResponse(res, 201, responseData);
+    } catch (error: any) {
+      console.error("Face recognition check-in error:", error);
+      return sendResponse(res, 500, null, "Check-in failed. Please try again.");
+    }
+  })
+);
+
+// Face recognition check-in (legacy with sessionId)
 router.post(
   "/checkin/:sessionId",
   authenticateToken,
@@ -465,7 +674,79 @@ router.post(
   })
 );
 
-// Manual check-in with code (backup method)
+// Manual check-in with code (automatic session detection)
+router.post(
+  "/checkin/manual",
+  authenticateToken,
+  [body("checkinCode").notEmpty().withMessage("Check-in code is required")],
+  asyncHandler(async (req: AuthenticatedRequest, res: express.Response) => {
+    if (handleValidationErrors(req, res)) return;
+
+    const { checkinCode } = req.body;
+    const userId = req.user!.id;
+    const now = new Date();
+
+    // Find active session with matching check-in code
+    const session = await prisma.classroomSession.findFirst({
+      where: {
+        checkinCode: checkinCode.toUpperCase(),
+        isActive: true,
+        startTime: { lte: now },
+        endTime: { gte: now },
+        NOT: {
+          attendances: {
+            some: {
+              userId: userId,
+            },
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      return sendResponse(
+        res,
+        404,
+        null,
+        "Invalid check-in code or no active session found"
+      );
+    }
+
+    // Create attendance record
+    const attendance = await prisma.attendance.create({
+      data: {
+        userId,
+        sessionId: session.id,
+        status: "PRESENT",
+        checkinTime: new Date(),
+        checkinMethod: "QR_CODE",
+      },
+      include: {
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        session: {
+          select: {
+            title: true,
+            classroom: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return sendResponse(res, 201, attendance);
+  })
+);
+
+// Manual check-in with code (legacy with sessionId)
 router.post(
   "/checkin/:sessionId/manual",
   authenticateToken,

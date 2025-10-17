@@ -1,4 +1,10 @@
-import { School, User, Users } from "lucide-react";
+import {
+  CheckCircle,
+  LayoutDashboard,
+  School,
+  User,
+  Users,
+} from "lucide-react";
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -7,18 +13,24 @@ const Sidebar: React.FC = () => {
   const { user } = useAuth();
 
   const navigation = [
-    // {
-    //   name: "Dashboard",
-    //   href: "/dashboard",
-    //   icon: LayoutDashboard,
-    //   roles: ["ADMIN", "TEACHER", "STUDENT"],
-    // },
+    {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: LayoutDashboard,
+      roles: ["ADMIN", "TEACHER", "STUDENT"],
+    },
     // {
     //   name: "Courses",
     //   href: "/courses",
     //   icon: BookOpen,
     //   roles: ["ADMIN", "TEACHER", "STUDENT"],
     // },
+    {
+      name: "Check In",
+      href: "/checkin",
+      icon: CheckCircle,
+      roles: ["ADMIN", "TEACHER"],
+    },
     {
       name: "Users",
       href: "/users",
