@@ -9,6 +9,7 @@ import helmet from "helmet";
 // Import routes
 import attendanceRoutes from "./routes/attendance";
 import authRoutes from "./routes/auth";
+import classroomRoutes from "./routes/classrooms";
 import courseRoutes from "./routes/courses";
 import lessonRoutes from "./routes/lessons";
 import userRoutes from "./routes/users";
@@ -57,6 +58,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/lessons", lessonRoutes);
 app.use("/api/attendance", attendanceRoutes);
+app.use("/api/classrooms", classroomRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

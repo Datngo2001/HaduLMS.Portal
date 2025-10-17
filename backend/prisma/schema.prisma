@@ -12,18 +12,19 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  firstName String
-  lastName  String
-  password  String
-  role      String   @default("STUDENT") // ADMIN, TEACHER, STUDENT
-  avatar    String?
-  faceId    String?  // Azure Face API person ID
-  isActive  Boolean  @default(true) // For enabling/disabling users
-  phone     String?  // Phone number for search functionality
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  email       String   @unique
+  firstName   String
+  lastName    String
+  password    String
+  role        String   @default("STUDENT") // ADMIN, TEACHER, STUDENT
+  avatar      String?
+  faceId      String?  // Azure Face API person ID
+  isActive    Boolean  @default(true) // For enabling/disabling users
+  phone       String?  // Phone number for search functionality
+  classroomId String?  // Optional classroom assignment for students
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
   createdCourses   Course[]           @relation("CourseCreator")
@@ -31,6 +32,7 @@ model User {
   lessons          Lesson[]           @relation("LessonCreator")
   attendances      Attendance[]
   teachingSessions ClassroomSession[] @relation("SessionTeacher")
+  classroom        Classroom?         @relation("ClassroomStudents", fields: [classroomId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@map("users")
 }
@@ -95,6 +97,7 @@ model Enrollment {
 model Classroom {
   id          String   @id @default(cuid())
   name        String
+  description String?  // Description of the classroom
   location    String?
   capacity    Int?
   isActive    Boolean  @default(true)
@@ -103,6 +106,7 @@ model Classroom {
 
   // Relations
   sessions    ClassroomSession[]
+  students    User[]             @relation("ClassroomStudents")
 
   @@map("classrooms")
 }
