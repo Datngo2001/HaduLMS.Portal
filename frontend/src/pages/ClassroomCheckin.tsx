@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import {
-  CheckCircle,
   AlertCircle,
+  ArrowLeft,
+  CheckCircle,
   Clock,
   MapPin,
-  User,
   QrCode,
-  ArrowLeft,
+  User,
 } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import FaceCapture from "../components/FaceCapture";
-import { api } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
+import { api } from "../services/_api";
 
 interface Session {
   id: string;

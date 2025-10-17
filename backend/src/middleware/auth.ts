@@ -19,11 +19,11 @@ export interface AuthenticatedRequest extends Request {
   params: any;
 }
 
-export const authenticateToken = (
+export const authenticateToken = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-): void => {
+): Promise<void> => {
   // Check for token in Authorization header (Bearer token)
   const authHeader = req.headers["authorization"];
   let token = authHeader && authHeader.split(" ")[1];
@@ -38,14 +38,31 @@ export const authenticateToken = (
     return;
   }
 
-  jwt.verify(token, process.env.JWT_SECRET as string, (err: any, user: any) => {
-    if (err) {
-      res.status(403).json({ error: "Invalid or expired token" });
-      return;
+  jwt.verify(
+    token,
+    process.env.JWT_SECRET as string,
+    async (err: any, user: any) => {
+      if (err) {
+        res.status(403).json({ error: "Invalid or expired token" });
+        return;
+      }
+
+      // Check if user is still active in the database
+      const { prisma } = await import("../index");
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, email: true, role: true, isActive: true },
+      });
+
+      if (!dbUser || !dbUser.isActive) {
+        res.status(403).json({ error: "Account has been disabled" });
+        return;
+      }
+
+      req.user = user as AuthenticatedUser;
+      next();
     }
-    req.user = user as AuthenticatedUser;
-    next();
-  });
+  );
 };
 
 export const requireRole = (roles: UserRole[]) => {

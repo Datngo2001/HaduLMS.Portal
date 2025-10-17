@@ -20,6 +20,8 @@ model User {
   role      String   @default("STUDENT") // ADMIN, TEACHER, STUDENT
   avatar    String?
   faceId    String?  // Azure Face API person ID
+  isActive  Boolean  @default(true) // For enabling/disabling users
+  phone     String?  // Phone number for search functionality
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

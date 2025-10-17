@@ -6,7 +6,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { api } from "../services/api";
+import { api } from "../services/_api";
 
 export interface User {
   id: string;
@@ -15,6 +15,8 @@ export interface User {
   lastName: string;
   role: "ADMIN" | "TEACHER" | "STUDENT";
   avatar?: string;
+  phone?: string;
+  isActive: boolean;
   createdAt: string;
 }
 

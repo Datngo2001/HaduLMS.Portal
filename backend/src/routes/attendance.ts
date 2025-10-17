@@ -324,7 +324,6 @@ router.post(
 
     const { sessionId } = req.params;
     const { image } = req.body;
-    console.log("Session ID:", sessionId);
     // Check if session exists and is active
     const session = await prisma.classroomSession.findUnique({
       where: { id: sessionId },
@@ -337,8 +336,6 @@ router.post(
         },
       },
     });
-
-    console.log("Session details:", session);
 
     if (!session || !session.isActive) {
       return sendResponse(res, 404, null, "Session not found or inactive");

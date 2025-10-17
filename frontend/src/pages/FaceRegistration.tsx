@@ -1,9 +1,9 @@
+import { AlertCircle, ArrowLeft, CheckCircle, User } from "lucide-react";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle, AlertCircle, User, ArrowLeft } from "lucide-react";
 import FaceCapture from "../components/FaceCapture";
-import { api } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
+import { api } from "../services/_api";
 
 const FaceRegistration: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
