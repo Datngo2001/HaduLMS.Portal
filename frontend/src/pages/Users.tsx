@@ -44,7 +44,7 @@ const Users: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   // Debounce timer ref
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<number | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -74,7 +74,7 @@ const Users: React.FC = () => {
       clearTimeout(debounceTimerRef.current);
     }
 
-    debounceTimerRef.current = setTimeout(() => {
+    debounceTimerRef.current = window.setTimeout(() => {
       fetchUsers();
     }, 300); // 300ms debounce delay
   }, [currentPage, searchTerm, selectedRole, selectedStatus]);
