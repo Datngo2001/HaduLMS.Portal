@@ -1,7 +1,6 @@
 import { Pencil, Plus, Search, Trash2, Users } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { debounce } from "../../services/_api";
 import { classroomAPI, type Classroom } from "../../services/classrooms";
 
 const Classrooms: React.FC = () => {
@@ -17,41 +16,67 @@ const Classrooms: React.FC = () => {
     totalPages: 0,
   });
 
-  // Debounced search function
-  const debouncedSearch = debounce(
-    async (searchTerm: string, active?: boolean, page: number = 1) => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await classroomAPI.getClassrooms({
-          page,
-          limit: pagination.limit,
-          search: searchTerm,
-          isActive: active,
-        });
-        setClassrooms(response.classrooms);
-        setPagination(response.pagination);
-      } catch (err: any) {
-        console.error("Error fetching classrooms:", err);
-        setError(err.response?.data?.error || "Failed to fetch classrooms");
-      } finally {
-        setLoading(false);
-      }
-    },
-    300
-  );
+  // Debounce timer ref
+  const debounceTimerRef = useRef<number | null>(null);
+
+  const searchClassrooms = async (
+    searchTerm: string,
+    active?: boolean,
+    page: number = 1
+  ) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await classroomAPI.getClassrooms({
+        page,
+        limit: pagination.limit,
+        search: searchTerm,
+        isActive: active,
+      });
+      setClassrooms(response.classrooms);
+      setPagination(response.pagination);
+    } catch (err: any) {
+      console.error("Error fetching classrooms:", err);
+      setError(err.response?.data?.error || "Failed to fetch classrooms");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchClassrooms = (page: number = 1) => {
-    debouncedSearch(search, isActive, page);
+    searchClassrooms(search, isActive, page);
   };
+
+  // Debounced version of fetchClassrooms for search
+  const debouncedFetchClassrooms = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = window.setTimeout(() => {
+      fetchClassrooms(1); // Reset to first page when search changes
+    }, 300); // 300ms debounce delay
+  }, [search, isActive]);
 
   useEffect(() => {
     fetchClassrooms();
   }, []);
 
   useEffect(() => {
-    fetchClassrooms(1); // Reset to first page when search/filter changes
-  }, [search, isActive]);
+    // Use debounced fetch for search changes, immediate for filter changes
+    if (search) {
+      debouncedFetchClassrooms();
+    } else {
+      fetchClassrooms(1); // Immediate fetch when search is cleared or for filter changes
+    }
+
+    // Cleanup timeout on unmount or dependency change
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [search, isActive, debouncedFetchClassrooms]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this classroom?")) {

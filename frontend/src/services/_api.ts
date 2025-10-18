@@ -39,17 +39,3 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-export function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  timeout = 300
-) {
-  let timer: NodeJS.Timeout;
-
-  return (...args: Parameters<T>) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      func(...args);
-    }, timeout);
-  };
-}
