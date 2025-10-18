@@ -1,0 +1,26 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      args:
+        NODE_ENV: development
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=sqlserver://host.docker.internal;database=hadu_lms_local;user=sa;password=1234;encrypt=true;trustServerCertificate=true;integratedSecurity=false
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - /app/dist
+    command: ["npm", "run", "dev:docker"]
+    ports:
+      - "3001:3001"
+      - "9229:9229" # Debug port for Node.js
+
+  face-recognition-service:
+    environment:
+      - DEBUG=true
+    volumes:
+      - ./face-service:/app
+      - /app/__pycache__
+    ports:
+      - "8001:8001"

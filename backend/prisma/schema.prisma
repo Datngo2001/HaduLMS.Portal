@@ -3,7 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
-  output = "../prisma-generated/client"
+  binaryTargets = ["native", "linux-musl", "windows"]
 }
 
 datasource db {
@@ -12,20 +12,27 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  firstName String
-  lastName  String
-  password  String
-  role      String   @default("STUDENT") // ADMIN, TEACHER, STUDENT
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  email       String   @unique
+  firstName   String
+  lastName    String
+  password    String
+  role        String   @default("STUDENT") // ADMIN, TEACHER, STUDENT
+  avatar      String?
+  faceId      String?  // Azure Face API person ID
+  isActive    Boolean  @default(true) // For enabling/disabling users
+  phone       String?  // Phone number for search functionality
+  classroomId String?  // Optional classroom assignment for students
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
-  createdCourses Course[]     @relation("CourseCreator")
-  enrollments    Enrollment[]
-  lessons        Lesson[]     @relation("LessonCreator")
+  createdCourses   Course[]           @relation("CourseCreator")
+  enrollments      Enrollment[]
+  lessons          Lesson[]           @relation("LessonCreator")
+  attendances      Attendance[]
+  teachingSessions ClassroomSession[] @relation("SessionTeacher")
+  classroom        Classroom?         @relation("ClassroomStudents", fields: [classroomId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@map("users")
 }
@@ -45,6 +52,7 @@ model Course {
   creator     User         @relation("CourseCreator", fields: [creatorId], references: [id])
   lessons     Lesson[]
   enrollments Enrollment[]
+  sessions    ClassroomSession[]
 
   @@map("courses")
 }
@@ -84,4 +92,62 @@ model Enrollment {
 
   @@unique([userId, courseId])
   @@map("enrollments")
+}
+
+model Classroom {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  // Description of the classroom
+  location    String?
+  capacity    Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  sessions    ClassroomSession[]
+  students    User[]             @relation("ClassroomStudents")
+
+  @@map("classrooms")
+}
+
+model ClassroomSession {
+  id          String   @id @default(cuid())
+  title       String
+  startTime   DateTime
+  endTime     DateTime
+  isActive    Boolean  @default(false)
+  checkinCode String?  // Optional QR code for backup check-in
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  classroomId String
+  classroom   Classroom    @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  courseId    String?
+  course      Course?      @relation(fields: [courseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  teacherId   String
+  teacher     User         @relation("SessionTeacher", fields: [teacherId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attendances Attendance[]
+
+  @@map("classroom_sessions")
+}
+
+model Attendance {
+  id              String           @id @default(cuid())
+  status          String           @default("PRESENT") // PRESENT, ABSENT, LATE
+  checkinTime     DateTime?
+  checkinMethod   String?          // FACE_RECOGNITION, QR_CODE, MANUAL
+  confidence      Float?           // Face recognition confidence score
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Relations
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sessionId       String?          // Made optional to allow standalone check-ins
+  session         ClassroomSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // Removed unique constraint since we allow multiple standalone check-ins
+  @@map("attendances")
 }

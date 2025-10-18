@@ -1,13 +1,22 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext';
-import Layout from './components/Layout/Layout';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Courses from './pages/Courses';
-import CourseDetail from './pages/CourseDetail';
-import Profile from './pages/Profile';
+import React from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
+import Layout from "./components/Layout/Layout";
+import { useAuth } from "./contexts/AuthContext";
+import CheckIn from "./pages/CheckIn";
+import ClassroomCheckin from "./pages/ClassroomCheckin";
+import ClassroomDetail from "./pages/Classrooms/ClassroomDetail";
+import Classrooms from "./pages/Classrooms/Classrooms";
+import CreateClassroom from "./pages/Classrooms/CreateClassroom";
+import EditClassroom from "./pages/Classrooms/EditClassroom";
+import CourseDetail from "./pages/CourseDetail";
+import Courses from "./pages/Courses";
+import Dashboard from "./pages/Dashboard";
+import FaceRegistration from "./pages/FaceRegistration";
+import Login from "./pages/Login";
+import Profile from "./pages/Profile";
+import Register from "./pages/Register";
+import TeacherFaceRegistration from "./pages/TeacherFaceRegistration";
+import Users from "./pages/Users";
 
 const App: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -37,7 +46,19 @@ const App: React.FC = () => {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/courses" element={<Courses />} />
         <Route path="/courses/:id" element={<CourseDetail />} />
+        <Route path="/users" element={<Users />} />
+        <Route path="/classrooms" element={<Classrooms />} />
+        <Route path="/classrooms/new" element={<CreateClassroom />} />
+        <Route path="/classrooms/:id" element={<ClassroomDetail />} />
+        <Route path="/classrooms/:id/edit" element={<EditClassroom />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/face-registration" element={<FaceRegistration />} />
+        <Route
+          path="/teacher/face-registration"
+          element={<TeacherFaceRegistration />}
+        />
+        <Route path="/checkin" element={<CheckIn />} />
+        <Route path="/checkin/:sessionId" element={<ClassroomCheckin />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Layout>

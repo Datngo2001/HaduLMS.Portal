@@ -1,10 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { NextFunction, Request, Response } from "express";
+import jwt from "jsonwebtoken";
 
 export enum UserRole {
-  ADMIN = 'ADMIN',
-  TEACHER = 'TEACHER',
-  STUDENT = 'STUDENT'
+  ADMIN = "ADMIN",
+  TEACHER = "TEACHER",
+  STUDENT = "STUDENT",
 }
 
 export interface AuthenticatedUser {
@@ -19,37 +19,68 @@ export interface AuthenticatedRequest extends Request {
   params: any;
 }
 
-export const authenticateToken = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+export const authenticateToken = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  // Check for token in Authorization header (Bearer token)
+  const authHeader = req.headers["authorization"];
+  let token = authHeader && authHeader.split(" ")[1];
+
+  // If no Authorization header, check for token in cookies
+  if (!token) {
+    token = req.cookies?.authToken;
+  }
 
   if (!token) {
-    res.status(401).json({ error: 'Access token required' });
+    res.status(401).json({ error: "Access token required" });
     return;
   }
 
-  jwt.verify(token, process.env.JWT_SECRET as string, (err: any, user: any) => {
-    if (err) {
-      res.status(403).json({ error: 'Invalid or expired token' });
-      return;
+  jwt.verify(
+    token,
+    process.env.JWT_SECRET as string,
+    async (err: any, user: any) => {
+      if (err) {
+        res.status(403).json({ error: "Invalid or expired token" });
+        return;
+      }
+
+      // Check if user is still active in the database
+      const { prisma } = await import("../index");
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, email: true, role: true, isActive: true },
+      });
+
+      if (!dbUser || !dbUser.isActive) {
+        res.status(403).json({ error: "Account has been disabled" });
+        return;
+      }
+
+      req.user = user as AuthenticatedUser;
+      next();
     }
-    req.user = user as AuthenticatedUser;
-    next();
-  });
+  );
 };
 
 export const requireRole = (roles: UserRole[]) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+  return (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): void => {
     if (!req.user) {
-      res.status(401).json({ error: 'Authentication required' });
+      res.status(401).json({ error: "Authentication required" });
       return;
     }
 
     if (!roles.includes(req.user.role)) {
-      res.status(403).json({ 
-        error: 'Insufficient permissions',
+      res.status(403).json({
+        error: "Insufficient permissions",
         required: roles,
-        current: req.user.role
+        current: req.user.role,
       });
       return;
     }
@@ -61,4 +92,8 @@ export const requireRole = (roles: UserRole[]) => {
 // Helper functions for common role checks
 export const requireAdmin = requireRole([UserRole.ADMIN]);
 export const requireTeacher = requireRole([UserRole.ADMIN, UserRole.TEACHER]);
-export const requireStudent = requireRole([UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT]);
+export const requireStudent = requireRole([
+  UserRole.ADMIN,
+  UserRole.TEACHER,
+  UserRole.STUDENT,
+]);
