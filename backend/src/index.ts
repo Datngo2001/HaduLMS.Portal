@@ -35,11 +35,15 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // CORS configuration
+const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
+  .split(",")
+  .map((url) => url.trim());
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: allowedOrigins,
     credentials: true,
-  })
+  }),
 );
 
 // Body parsing middleware
@@ -83,7 +87,7 @@ app.use(
     err: any,
     req: express.Request,
     res: express.Response,
-    next: express.NextFunction
+    next: express.NextFunction,
   ) => {
     console.error("Global error handler:", err);
 
@@ -94,7 +98,7 @@ app.use(
       error: message,
       ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
     });
-  }
+  },
 );
 
 // Graceful shutdown
@@ -123,11 +127,7 @@ async function startServer() {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
       console.log(`🌐 API available at: http://localhost:${PORT}/api`);
-      console.log(
-        `🔗 CORS enabled for: ${
-          process.env.FRONTEND_URL || "http://localhost:5173"
-        }`
-      );
+      console.log(`🔗 CORS enabled for: ${allowedOrigins.join(", ")}`);
       console.log(`🔑 CORS credentials: enabled`);
     });
   } catch (error) {

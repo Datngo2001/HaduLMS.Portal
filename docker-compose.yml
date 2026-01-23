@@ -78,6 +78,17 @@ services:
     networks:
       - app-network
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - nginx
+    restart: unless-stopped
+    networks:
+      - app-network
+    environment:
+      - TUNNEL_ORIGIN_SERVER_NAME=nginx
+
 networks:
   app-network:
     driver: bridge
