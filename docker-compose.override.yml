@@ -17,7 +17,6 @@ services:
       - /app/node_modules
       - /app/dist
       - ./backend/uploads:/app/uploads
-    command: ["npm", "run", "dev:docker"]
     ports:
       - "3001:3001"
       - "9229:9229" # Debug port for Node.js
@@ -70,6 +69,8 @@ services:
       - "3000:3000" # Expose for development
     depends_on:
       - backend
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8080/api
     restart: unless-stopped
     networks:
       - app-network
@@ -90,16 +91,16 @@ services:
     networks:
       - app-network
 
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-    depends_on:
-      - nginx
-    restart: unless-stopped
-    networks:
-      - app-network
-    environment:
-      - TUNNEL_ORIGIN_SERVER_NAME=nginx
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+  #   depends_on:
+  #     - nginx
+  #   restart: unless-stopped
+  #   networks:
+  #     - app-network
+  #   environment:
+  #     - TUNNEL_ORIGIN_SERVER_NAME=nginx
 
 networks:
   app-network:

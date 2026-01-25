@@ -1,11 +1,11 @@
 import express from "express";
 import { body, param } from "express-validator";
-import { prisma } from "../index";
 import {
   AuthenticatedRequest,
   authenticateToken,
   requireTeacher,
 } from "../middleware/auth";
+import { prisma } from "../prismaClient";
 import { FaceRecognitionFactory } from "../services/faceRecognitionFactory";
 import {
   asyncHandler,
@@ -38,7 +38,7 @@ router.post(
           res,
           400,
           null,
-          "Invalid image format. Please provide a valid base64 image."
+          "Invalid image format. Please provide a valid base64 image.",
         );
       }
 
@@ -63,7 +63,7 @@ router.post(
           res,
           404,
           null,
-          "Student not found or is not active"
+          "Student not found or is not active",
         );
       }
 
@@ -74,12 +74,12 @@ router.post(
           // Delete the existing face registration
           await faceService.deleteUserFace(student.faceId);
           console.log(
-            `Deleted existing face registration for student ${studentId}`
+            `Deleted existing face registration for student ${studentId}`,
           );
         } catch (error) {
           console.warn(
             "Failed to delete existing face, continuing with registration:",
-            error
+            error,
           );
           // Continue with registration even if deletion fails
         }
@@ -111,10 +111,10 @@ router.post(
         res,
         500,
         null,
-        error.message || "Failed to register student face"
+        error.message || "Failed to register student face",
       );
     }
-  })
+  }),
 );
 
 // Create classroom
@@ -141,7 +141,7 @@ router.post(
     });
 
     return sendResponse(res, 201, classroom);
-  })
+  }),
 );
 
 // Get all classrooms
@@ -156,7 +156,7 @@ router.get(
     });
 
     return sendResponse(res, 200, classrooms);
-  })
+  }),
 );
 
 // Create classroom session
@@ -199,7 +199,7 @@ router.post(
           res,
           404,
           null,
-          "Course not found or you do not have permission"
+          "Course not found or you do not have permission",
         );
       }
     }
@@ -241,7 +241,7 @@ router.post(
     });
 
     return sendResponse(res, 201, session);
-  })
+  }),
 );
 
 // Get session details
@@ -279,7 +279,7 @@ router.get(
     }
 
     return sendResponse(res, 200, session);
-  })
+  }),
 );
 
 // Get teacher's sessions
@@ -308,7 +308,7 @@ router.get(
     });
 
     return sendResponse(res, 200, sessions);
-  })
+  }),
 );
 
 // Teacher assisted check-in (teacher checks in students using face recognition)
@@ -338,7 +338,7 @@ router.post(
           res,
           400,
           null,
-          "Face not recognized. Please ensure the student has registered their face."
+          "Face not recognized. Please ensure the student has registered their face.",
         );
       }
 
@@ -365,7 +365,7 @@ router.post(
           res,
           404,
           null,
-          "Student not found or is not active"
+          "Student not found or is not active",
         );
       }
 
@@ -430,7 +430,7 @@ router.post(
           },
           `${student.firstName} ${student.lastName} has already checked in ${
             currentSession ? "for this session" : "today"
-          }`
+          }`,
         );
       }
 
@@ -515,7 +515,7 @@ router.post(
       console.error("Teacher assisted check-in error:", error);
       return sendResponse(res, 500, null, "Check-in failed. Please try again.");
     }
-  })
+  }),
 );
 
 // Get session attendance (for teachers)
@@ -576,13 +576,13 @@ router.get(
         present: attendances.filter((a: any) => a.status === "PRESENT").length,
         late: attendances.filter((a: any) => a.status === "LATE").length,
         faceRecognition: attendances.filter(
-          (a: any) => a.checkinMethod === "FACE_RECOGNITION"
+          (a: any) => a.checkinMethod === "FACE_RECOGNITION",
         ).length,
         manual: attendances.filter((a: any) => a.checkinMethod === "QR_CODE")
           .length,
       },
     });
-  })
+  }),
 );
 
 // Update session status
@@ -614,7 +614,7 @@ router.patch(
     });
 
     return sendResponse(res, 200, updatedSession);
-  })
+  }),
 );
 
 // Get classroom attendance overview (for teachers)
@@ -704,7 +704,7 @@ router.get(
     const totalSessions = sessions.length;
     const sessionAttendances = sessions.reduce(
       (sum, session) => sum + session.attendances.length,
-      0
+      0,
     );
     const totalAttendances = sessionAttendances + standaloneAttendances.length;
     const averageAttendance =
@@ -778,7 +778,7 @@ router.get(
         faceRecognition: session.attendances.filter(
           (a) =>
             a.checkinMethod === "FACE_RECOGNITION" ||
-            a.checkinMethod === "TEACHER_ASSISTED"
+            a.checkinMethod === "TEACHER_ASSISTED",
         ).length,
         manual: session.attendances.filter((a) => a.checkinMethod === "QR_CODE")
           .length,
@@ -811,7 +811,7 @@ router.get(
         topStudents,
       },
     });
-  })
+  }),
 );
 
 export default router;

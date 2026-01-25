@@ -1,12 +1,12 @@
 import bcrypt from "bcryptjs";
 import express from "express";
 import { body, param, query } from "express-validator";
-import { prisma } from "../index";
 import {
   AuthenticatedRequest,
   authenticateToken,
   requireAdmin,
 } from "../middleware/auth";
+import { prisma } from "../prismaClient";
 import {
   asyncHandler,
   handleValidationErrors,
@@ -38,7 +38,7 @@ router.get(
     }
 
     return sendResponse(res, 200, user);
-  })
+  }),
 );
 
 // Get user's enrollments
@@ -68,7 +68,7 @@ router.get(
     });
 
     return sendResponse(res, 200, enrollments);
-  })
+  }),
 );
 
 // Get user's created courses (for teachers/admins)
@@ -81,7 +81,7 @@ router.get(
         res,
         403,
         null,
-        "Students cannot access this endpoint"
+        "Students cannot access this endpoint",
       );
     }
 
@@ -99,7 +99,7 @@ router.get(
     });
 
     return sendResponse(res, 200, courses);
-  })
+  }),
 );
 
 // Update user profile
@@ -132,7 +132,7 @@ router.put(
     });
 
     return sendResponse(res, 200, user);
-  })
+  }),
 );
 
 // Admin-only routes for user management
@@ -211,7 +211,7 @@ router.get(
         totalPages: Math.ceil(total / parseInt(limit as string)),
       },
     });
-  })
+  }),
 );
 
 // Get user by ID (Admin only)
@@ -252,7 +252,7 @@ router.get(
     }
 
     return sendResponse(res, 200, user);
-  })
+  }),
 );
 
 // Create user (Admin only)
@@ -283,7 +283,7 @@ router.post(
         res,
         400,
         null,
-        "User already exists with this email"
+        "User already exists with this email",
       );
     }
 
@@ -315,7 +315,7 @@ router.post(
     });
 
     return sendResponse(res, 201, user, "User created successfully");
-  })
+  }),
 );
 
 // Update user (Admin only)
@@ -358,7 +358,7 @@ router.put(
           res,
           400,
           null,
-          "Email already taken by another user"
+          "Email already taken by another user",
         );
       }
     }
@@ -397,7 +397,7 @@ router.put(
     });
 
     return sendResponse(res, 200, user, "User updated successfully");
-  })
+  }),
 );
 
 // Toggle user status (Admin only)
@@ -436,7 +436,7 @@ router.patch(
 
     const action = isActive ? "enabled" : "disabled";
     return sendResponse(res, 200, user, `User ${action} successfully`);
-  })
+  }),
 );
 
 export default router;

@@ -1,18 +1,26 @@
-import express from 'express';
-import { param, query } from 'express-validator';
-import { prisma } from '../index';
-import { authenticateToken, requireTeacher, AuthenticatedRequest } from '../middleware/auth';
-import { sendResponse, handleValidationErrors, asyncHandler } from '../utils/response';
+import express from "express";
+import { param, query } from "express-validator";
+import {
+  AuthenticatedRequest,
+  authenticateToken,
+  requireTeacher,
+} from "../middleware/auth";
+import { prisma } from "../prismaClient";
+import {
+  asyncHandler,
+  handleValidationErrors,
+  sendResponse,
+} from "../utils/response";
 
 const router = express.Router();
 
 // Get all published courses (public)
 router.get(
-  '/',
+  "/",
   [
-    query('page').optional().isInt({ min: 1 }),
-    query('limit').optional().isInt({ min: 1, max: 100 }),
-    query('search').optional().trim(),
+    query("page").optional().isInt({ min: 1 }),
+    query("limit").optional().isInt({ min: 1, max: 100 }),
+    query("search").optional().trim(),
   ],
   asyncHandler(async (req: express.Request, res: express.Response) => {
     if (handleValidationErrors(req, res)) return;
@@ -26,8 +34,8 @@ router.get(
       isPublished: true,
       ...(search && {
         OR: [
-          { title: { contains: search, mode: 'insensitive' as const } },
-          { description: { contains: search, mode: 'insensitive' as const } },
+          { title: { contains: search, mode: "insensitive" as const } },
+          { description: { contains: search, mode: "insensitive" as const } },
         ],
       }),
     };
@@ -50,7 +58,7 @@ router.get(
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
@@ -66,13 +74,13 @@ router.get(
         pages: Math.ceil(total / limit),
       },
     });
-  })
+  }),
 );
 
 // Get course by ID
 router.get(
-  '/:id',
-  [param('id').isString()],
+  "/:id",
+  [param("id").isString()],
   asyncHandler(async (req: express.Request, res: express.Response) => {
     if (handleValidationErrors(req, res)) return;
 
@@ -90,7 +98,7 @@ router.get(
         },
         lessons: {
           where: { isPublished: true },
-          orderBy: { order: 'asc' },
+          orderBy: { order: "asc" },
           select: {
             id: true,
             title: true,
@@ -107,27 +115,27 @@ router.get(
     });
 
     if (!course) {
-      return sendResponse(res, 404, null, 'Course not found');
+      return sendResponse(res, 404, null, "Course not found");
     }
 
     if (!course.isPublished) {
-      return sendResponse(res, 404, null, 'Course not found');
+      return sendResponse(res, 404, null, "Course not found");
     }
 
     return sendResponse(res, 200, course);
-  })
+  }),
 );
 
 // Create course (Teachers and Admins only)
 router.post(
-  '/',
+  "/",
   authenticateToken,
   requireTeacher,
   asyncHandler(async (req: AuthenticatedRequest, res: express.Response) => {
     const { title, description, price = 0 } = req.body;
 
     if (!title) {
-      return sendResponse(res, 400, null, 'Title is required');
+      return sendResponse(res, 400, null, "Title is required");
     }
 
     const course = await prisma.course.create({
@@ -149,15 +157,15 @@ router.post(
     });
 
     return sendResponse(res, 201, course);
-  })
+  }),
 );
 
 // Update course (Teachers and Admins only)
 router.put(
-  '/:id',
+  "/:id",
   authenticateToken,
   requireTeacher,
-  [param('id').isString()],
+  [param("id").isString()],
   asyncHandler(async (req: AuthenticatedRequest, res: express.Response) => {
     if (handleValidationErrors(req, res)) return;
 
@@ -170,12 +178,20 @@ router.put(
     });
 
     if (!existingCourse) {
-      return sendResponse(res, 404, null, 'Course not found');
+      return sendResponse(res, 404, null, "Course not found");
     }
 
     // Only course creator or admin can update
-    if (existingCourse.creatorId !== req.user!.id && req.user!.role !== 'ADMIN') {
-      return sendResponse(res, 403, null, 'Not authorized to update this course');
+    if (
+      existingCourse.creatorId !== req.user!.id &&
+      req.user!.role !== "ADMIN"
+    ) {
+      return sendResponse(
+        res,
+        403,
+        null,
+        "Not authorized to update this course",
+      );
     }
 
     const course = await prisma.course.update({
@@ -198,14 +214,14 @@ router.put(
     });
 
     return sendResponse(res, 200, course);
-  })
+  }),
 );
 
 // Enroll in course (Students only)
 router.post(
-  '/:id/enroll',
+  "/:id/enroll",
   authenticateToken,
-  [param('id').isString()],
+  [param("id").isString()],
   asyncHandler(async (req: AuthenticatedRequest, res: express.Response) => {
     if (handleValidationErrors(req, res)) return;
 
@@ -218,7 +234,7 @@ router.post(
     });
 
     if (!course) {
-      return sendResponse(res, 404, null, 'Course not found or not available');
+      return sendResponse(res, 404, null, "Course not found or not available");
     }
 
     // Check if already enrolled
@@ -232,7 +248,7 @@ router.post(
     });
 
     if (existingEnrollment) {
-      return sendResponse(res, 400, null, 'Already enrolled in this course');
+      return sendResponse(res, 400, null, "Already enrolled in this course");
     }
 
     // Create enrollment
@@ -253,7 +269,7 @@ router.post(
     });
 
     return sendResponse(res, 201, enrollment);
-  })
+  }),
 );
 
 export default router;

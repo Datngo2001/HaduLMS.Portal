@@ -3,12 +3,12 @@ import express from "express";
 import { body } from "express-validator";
 import jwt from "jsonwebtoken";
 import fetch from "node-fetch";
-import { prisma } from "../index";
 import {
   AuthenticatedRequest,
   authenticateToken,
   UserRole,
 } from "../middleware/auth";
+import { prisma } from "../prismaClient";
 import {
   asyncHandler,
   handleValidationErrors,
@@ -69,7 +69,7 @@ router.post(
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      jwtSecret
+      jwtSecret,
     );
 
     // Return user without password
@@ -82,9 +82,9 @@ router.post(
       res,
       200,
       { user: userWithoutPassword, token },
-      undefined
+      undefined,
     );
-  })
+  }),
 );
 
 // Google OAuth Login
@@ -99,7 +99,7 @@ router.post(
     try {
       // Verify Google access token by fetching user info
       const response = await fetch(
-        `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${token}`
+        `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${token}`,
       );
 
       if (!response.ok) {
@@ -175,7 +175,7 @@ router.post(
 
       const jwtToken = jwt.sign(
         { id: user.id, email: user.email, role: user.role },
-        jwtSecret
+        jwtSecret,
       );
 
       // Set HTTP-only cookie
@@ -186,7 +186,7 @@ router.post(
       console.error("Google OAuth error:", error);
       return sendResponse(res, 400, null, "Failed to authenticate with Google");
     }
-  })
+  }),
 );
 
 // Get current user (for session persistence)
@@ -216,7 +216,7 @@ router.get(
     } catch (error) {
       return sendResponse(res, 500, null, "Internal server error");
     }
-  }
+  },
 );
 
 // Logout endpoint
@@ -232,7 +232,7 @@ router.post("/logout", (req: express.Request, res: express.Response) => {
     res,
     200,
     { message: "Logged out successfully" },
-    undefined
+    undefined,
   );
 });
 

@@ -2,7 +2,6 @@ version: "3.8"
 
 services:
   backend:
-    image: datngo2001/hadu-lms-backend:latest
     environment:
       NODE_ENV: production
       PORT: 3001
@@ -15,7 +14,6 @@ services:
       - face-recognition-service
 
   face-recognition-service:
-    image: datngo2001/hadu-lms-face-service:latest
     environment:
       SERVICE_PORT: 8001
       HOST: 0.0.0.0
@@ -24,6 +22,5 @@ services:
       DEBUG: "true"
 
   frontend:
-    image: datngo2001/hadu-lms-frontend:latest
     depends_on:
       - backend

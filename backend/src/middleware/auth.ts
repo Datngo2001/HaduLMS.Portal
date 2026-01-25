@@ -22,7 +22,7 @@ export interface AuthenticatedRequest extends Request {
 export const authenticateToken = async (
   req: AuthenticatedRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   // Check for token in Authorization header (Bearer token)
   const authHeader = req.headers["authorization"];
@@ -48,7 +48,7 @@ export const authenticateToken = async (
       }
 
       // Check if user is still active in the database
-      const { prisma } = await import("../index");
+      const { prisma } = await import("../prismaClient");
       const dbUser = await prisma.user.findUnique({
         where: { id: user.id },
         select: { id: true, email: true, role: true, isActive: true },
@@ -61,7 +61,7 @@ export const authenticateToken = async (
 
       req.user = user as AuthenticatedUser;
       next();
-    }
+    },
   );
 };
 
@@ -69,7 +69,7 @@ export const requireRole = (roles: UserRole[]) => {
   return (
     req: AuthenticatedRequest,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): void => {
     if (!req.user) {
       res.status(401).json({ error: "Authentication required" });
