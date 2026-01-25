@@ -18,7 +18,6 @@ BACKEND_APP="backend"
 FACE_APP="face-recognition-service"
 
 # Ports
-FRONTEND_PORT=3000
 BACKEND_PORT=3001
 FACE_PORT=8001
 
@@ -71,9 +70,6 @@ docker push $DOCKERHUB_USER/hadu-lms-backend:latest
 docker build -t $DOCKERHUB_USER/hadu-lms-face-service:latest ./face-service
 docker push $DOCKERHUB_USER/hadu-lms-face-service:latest
 
-docker build -t $DOCKERHUB_USER/hadu-lms-frontend:latest ./frontend
-docker push $DOCKERHUB_USER/hadu-lms-frontend:latest
-
 # ================================
 # DEPLOY CONTAINER APPS
 # ================================
@@ -99,22 +95,25 @@ az containerapp create \
   --target-port $FACE_PORT \
   --ingress internal
 
-echo "🚀 Deploying frontend"
-az containerapp create \
+echo "🚀 Deploying frontend with Static Web App"
+az staticwebapp create \
   --name $FRONTEND_APP \
   --resource-group $RESOURCE_GROUP \
-  --environment $ENV_NAME \
-  --image $DOCKERHUB_USER/hadu-lms-frontend:latest \
-  --target-port $FRONTEND_PORT \
-  --ingress external
+  --source https://github.com/datngo2001/HaduLMS.Portal \
+  --location eastasia \
+  --branch main \
+  --app-location frontend \
+  --output-location dist \
+  --sku Free \
+  --login-with-github
 
 # ================================
 # OUTPUT URLS
 # ================================
-FRONTEND_URL=$(az containerapp show \
+FRONTEND_URL=$(az staticwebapp show \
   --name $FRONTEND_APP \
   --resource-group $RESOURCE_GROUP \
-  --query properties.configuration.ingress.fqdn \
+  --query defaultHostname \
   -o tsv)
 
 BACKEND_URL=$(az containerapp show \
