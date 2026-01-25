@@ -1,13 +1,13 @@
-name: Azure Static Web Apps Preview CI/CD
+name: Frontend Preview CI/CD
 
 on:
   push:
     branches:
-      - develop
+      - staging
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
-      - develop
+      - staging
 
 jobs:
   build_and_deploy_job:
