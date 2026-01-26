@@ -7,6 +7,7 @@ import {
   requireAdmin,
 } from "../middleware/auth";
 import { prisma } from "../prismaClient";
+import { FaceRecognitionFactory } from "../services/faceRecognitionFactory";
 import {
   asyncHandler,
   handleValidationErrors,
@@ -14,6 +15,7 @@ import {
 } from "../utils/response";
 
 const router = express.Router();
+const faceService = FaceRecognitionFactory.getService();
 
 // Get current user profile
 router.get(
@@ -29,6 +31,8 @@ router.get(
         lastName: true,
         role: true,
         avatar: true,
+        hasFaceRegistered: true,
+        faceRegisteredAt: true,
         createdAt: true,
       },
     });
@@ -127,6 +131,8 @@ router.put(
         lastName: true,
         role: true,
         avatar: true,
+        hasFaceRegistered: true,
+        faceRegisteredAt: true,
         createdAt: true,
       },
     });
@@ -187,6 +193,8 @@ router.get(
           avatar: true,
           phone: true,
           isActive: true,
+          hasFaceRegistered: true,
+          faceRegisteredAt: true,
           createdAt: true,
           _count: {
             select: {
@@ -236,6 +244,8 @@ router.get(
         avatar: true,
         phone: true,
         isActive: true,
+        hasFaceRegistered: true,
+        faceRegisteredAt: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -310,6 +320,8 @@ router.post(
         avatar: true,
         phone: true,
         isActive: true,
+        hasFaceRegistered: true,
+        faceRegisteredAt: true,
         createdAt: true,
       },
     });
@@ -391,6 +403,8 @@ router.put(
         avatar: true,
         phone: true,
         isActive: true,
+        hasFaceRegistered: true,
+        faceRegisteredAt: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -429,6 +443,8 @@ router.patch(
         avatar: true,
         phone: true,
         isActive: true,
+        hasFaceRegistered: true,
+        faceRegisteredAt: true,
         createdAt: true,
         updatedAt: true,
       },

@@ -18,7 +18,9 @@ model User {
   password    String
   role        String   @default("STUDENT") // ADMIN, TEACHER, STUDENT
   avatar      String?
-  faceId      String?  // Azure Face API person ID
+  faceId      String?  // Azure Face API person ID (deprecated - use hasFaceRegistered)
+  hasFaceRegistered Boolean @default(false) // Whether user has registered face in blob storage
+  faceRegisteredAt DateTime? // When face was registered
   isActive    Boolean  @default(true) // For enabling/disabling users
   phone       String?  // Phone number for search functionality
   classroomId String?  // Optional classroom assignment for students

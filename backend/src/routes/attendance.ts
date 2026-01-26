@@ -54,7 +54,8 @@ router.post(
           firstName: true,
           lastName: true,
           email: true,
-          faceId: true,
+          hasFaceRegistered: true,
+          faceRegisteredAt: true,
         },
       });
 
@@ -68,11 +69,11 @@ router.post(
       }
 
       // Check if student already has a face registered
-      const hadExistingFace = !!student.faceId;
-      if (student.faceId) {
+      const hadExistingFace = student.hasFaceRegistered;
+      if (student.hasFaceRegistered) {
         try {
-          // Delete the existing face registration
-          await faceService.deleteUserFace(student.faceId);
+          // Delete the existing face registration from blob storage
+          await faceService.deleteUserFace(studentId);
           console.log(
             `Deleted existing face registration for student ${studentId}`,
           );
@@ -85,12 +86,16 @@ router.post(
         }
       }
 
+      // Register face in blob storage
       const personId = await faceService.registerUserFace(studentId, image);
 
-      // Update student with face ID
+      // Update student with face registration status
       await prisma.user.update({
         where: { id: studentId },
-        data: { faceId: personId },
+        data: {
+          hasFaceRegistered: true,
+          faceRegisteredAt: new Date(),
+        },
       });
 
       return sendResponse(res, 200, {
