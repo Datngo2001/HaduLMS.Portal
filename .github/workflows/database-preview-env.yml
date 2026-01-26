@@ -1,0 +1,72 @@
+name: Database Migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - staging
+    paths:
+      - "backend/src/prisma/migrations/**"
+      - "backend/src/prisma/schema.prisma"
+
+jobs:
+  migrate:
+    name: Run Database Migration
+    runs-on: ubuntu-latest
+
+    environment: preview
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.BACKEND_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.BACKEND_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.BACKEND_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get Database URL from Key Vault
+        id: get-secrets
+        run: |
+          DATABASE_URL=$(az keyvault secret show --name staging-database-migration-url --vault-name ${{ secrets.AZURE_KEY_VAULT_NAME }} --query value -o tsv)
+          echo "::add-mask::$DATABASE_URL"
+          echo "DATABASE_URL=$DATABASE_URL" >> $GITHUB_ENV
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Generate Prisma Client
+        working-directory: ./backend
+        run: npm run db:generate
+
+      - name: Run database migrations
+        working-directory: ./backend
+        run: npm run db:deploy
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Verify migration status
+        working-directory: ./backend
+        run: npx prisma migrate status
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Database migration failed for preview environment"
+          exit 1
