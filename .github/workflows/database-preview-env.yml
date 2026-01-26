@@ -1,4 +1,4 @@
-name: Database Migration
+name: Database Preview CI/CD
 
 on:
   workflow_dispatch:
@@ -8,6 +8,7 @@ on:
     paths:
       - "backend/src/prisma/migrations/**"
       - "backend/src/prisma/schema.prisma"
+      - ".github/workflows/database-preview-env.yml"
 
 jobs:
   migrate:

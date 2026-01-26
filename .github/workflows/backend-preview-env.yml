@@ -7,7 +7,7 @@ on:
     branches: [staging]
     paths:
       - "**"
-      - ".github/workflows/backend-AutoDeployTrigger-e6ecd025-6377-462f-99c9-6af1c2e1a0bc.yml"
+      - ".github/workflows/backend-preview-env.yml"
 
   # Allow manual trigger
   workflow_dispatch:
