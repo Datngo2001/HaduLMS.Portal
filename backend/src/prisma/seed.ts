@@ -1,8 +1,19 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaMssql } from "@prisma/adapter-mssql";
 import bcrypt from "bcryptjs";
-import { UserRole } from "../src/middleware/auth";
+import { UserRole } from "../middleware/auth";
+import { PrismaClient } from "./generated/client";
 
-const prisma = new PrismaClient();
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error("DATABASE_URL environment variable is not set");
+}
+
+const adapter = new PrismaMssql(connectionString);
+
+const createPrismaClient = () => new PrismaClient({ adapter });
+
+const prisma = createPrismaClient();
 
 async function main() {
   console.log("🌱 Seeding database...");
@@ -227,10 +238,10 @@ async function main() {
 
   // Session 2: Future session
   const session2StartTime = new Date(
-    today.getTime() + 24 * 60 * 60 * 1000 + 14 * 60 * 60 * 1000
+    today.getTime() + 24 * 60 * 60 * 1000 + 14 * 60 * 60 * 1000,
   ); // 2 PM tomorrow
   const session2EndTime = new Date(
-    today.getTime() + 24 * 60 * 60 * 1000 + 15.5 * 60 * 60 * 1000
+    today.getTime() + 24 * 60 * 60 * 1000 + 15.5 * 60 * 60 * 1000,
   ); // 3:30 PM tomorrow
 
   const session2 = await prisma.classroomSession.upsert({
@@ -251,10 +262,10 @@ async function main() {
 
   // Session 3: Past session with attendance
   const session3StartTime = new Date(
-    today.getTime() - 24 * 60 * 60 * 1000 + 10 * 60 * 60 * 1000
+    today.getTime() - 24 * 60 * 60 * 1000 + 10 * 60 * 60 * 1000,
   ); // 10 AM yesterday
   const session3EndTime = new Date(
-    today.getTime() - 24 * 60 * 60 * 1000 + 11.5 * 60 * 60 * 1000
+    today.getTime() - 24 * 60 * 60 * 1000 + 11.5 * 60 * 60 * 1000,
   ); // 11:30 AM yesterday
 
   const session3 = await prisma.classroomSession.upsert({
@@ -346,10 +357,10 @@ async function main() {
   console.log("");
   console.log("📚 Classroom Sessions:");
   console.log(
-    '   - Active session: "TypeScript Fundamentals" (Check-in code: TS101A)'
+    '   - Active session: "TypeScript Fundamentals" (Check-in code: TS101A)',
   );
   console.log(
-    '   - Future session: "React Components Workshop" (Check-in code: REACT1)'
+    '   - Future session: "React Components Workshop" (Check-in code: REACT1)',
   );
   console.log("   - Past session with sample attendance data");
   console.log("");

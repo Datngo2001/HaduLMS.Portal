@@ -1,10 +1,9 @@
-import { PrismaClient } from "@prisma/client";
 import express from "express";
 import { authenticateToken, requireAdmin } from "../middleware/auth";
+import { prisma } from "../prismaClient";
 import { sendResponse } from "../utils/response";
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // GET /classrooms - Get all classrooms
 router.get("/", authenticateToken, async (req: any, res) => {
@@ -132,7 +131,7 @@ router.post("/", authenticateToken, requireAdmin, async (req: any, res) => {
         res,
         409,
         null,
-        "Classroom with this name already exists"
+        "Classroom with this name already exists",
       );
     }
 
@@ -188,7 +187,7 @@ router.put("/:id", authenticateToken, requireAdmin, async (req: any, res) => {
           res,
           409,
           null,
-          "Classroom with this name already exists"
+          "Classroom with this name already exists",
         );
       }
     }
@@ -260,7 +259,7 @@ router.delete(
           res,
           400,
           null,
-          "Cannot delete classroom with assigned students. Please reassign students first."
+          "Cannot delete classroom with assigned students. Please reassign students first.",
         );
       }
 
@@ -269,7 +268,7 @@ router.delete(
           res,
           400,
           null,
-          "Cannot delete classroom with existing sessions. Please remove sessions first."
+          "Cannot delete classroom with existing sessions. Please remove sessions first.",
         );
       }
 
@@ -284,7 +283,7 @@ router.delete(
       console.error("Error deleting classroom:", error);
       return sendResponse(res, 500, null, "Failed to delete classroom");
     }
-  }
+  },
 );
 
 // POST /classrooms/:id/students - Assign students to classroom (Admin only)
@@ -320,7 +319,7 @@ router.post(
           res,
           400,
           null,
-          `Classroom capacity exceeded. Current: ${classroom._count.students}, Adding: ${studentIds.length}, Capacity: ${classroom.capacity}`
+          `Classroom capacity exceeded. Current: ${classroom._count.students}, Adding: ${studentIds.length}, Capacity: ${classroom.capacity}`,
         );
       }
 
@@ -338,7 +337,7 @@ router.post(
           res,
           400,
           null,
-          "Some student IDs are invalid or not active students"
+          "Some student IDs are invalid or not active students",
         );
       }
 
@@ -351,7 +350,7 @@ router.post(
           null,
           `Some students are already assigned to other classrooms: ${alreadyAssigned
             .map((s) => s.firstName + " " + s.lastName)
-            .join(", ")}`
+            .join(", ")}`,
         );
       }
 
@@ -389,10 +388,10 @@ router.post(
         res,
         500,
         null,
-        "Failed to assign students to classroom"
+        "Failed to assign students to classroom",
       );
     }
-  }
+  },
 );
 
 // DELETE /classrooms/:id/students/:studentId - Remove student from classroom (Admin only)
@@ -427,7 +426,7 @@ router.delete(
           res,
           404,
           null,
-          "Student not found in this classroom"
+          "Student not found in this classroom",
         );
       }
 
@@ -446,10 +445,10 @@ router.delete(
         res,
         500,
         null,
-        "Failed to remove student from classroom"
+        "Failed to remove student from classroom",
       );
     }
-  }
+  },
 );
 
 // GET /classrooms/:id/available-students - Get students not assigned to any classroom (Admin only)
@@ -491,7 +490,7 @@ router.get(
       console.error("Error fetching available students:", error);
       return sendResponse(res, 500, null, "Failed to fetch available students");
     }
-  }
+  },
 );
 
 // GET /classrooms/:id/sessions - Get classroom sessions
@@ -623,7 +622,7 @@ router.get(
           res,
           404,
           null,
-          "Session not found in this classroom"
+          "Session not found in this classroom",
         );
       }
 
@@ -632,7 +631,7 @@ router.get(
       console.error("Error fetching classroom session:", error);
       return sendResponse(res, 500, null, "Failed to fetch classroom session");
     }
-  }
+  },
 );
 
 // POST /classrooms/:id/sessions - Create a new classroom session
@@ -652,7 +651,7 @@ router.post(
           res,
           400,
           null,
-          "Title, start time, end time, and teacher are required"
+          "Title, start time, end time, and teacher are required",
         );
       }
 
@@ -664,7 +663,7 @@ router.post(
           res,
           400,
           null,
-          "End time must be after start time"
+          "End time must be after start time",
         );
       }
 
@@ -709,7 +708,7 @@ router.post(
           res,
           400,
           null,
-          "Session time conflicts with existing session in this classroom"
+          "Session time conflicts with existing session in this classroom",
         );
       }
 
@@ -752,7 +751,7 @@ router.post(
       console.error("Error creating classroom session:", error);
       return sendResponse(res, 500, null, "Failed to create classroom session");
     }
-  }
+  },
 );
 
 // PUT /classrooms/:classroomId/sessions/:sessionId - Update a classroom session
@@ -786,7 +785,7 @@ router.put(
           res,
           404,
           null,
-          "Session not found in this classroom"
+          "Session not found in this classroom",
         );
       }
 
@@ -799,7 +798,7 @@ router.put(
             res,
             400,
             null,
-            "End time must be after start time"
+            "End time must be after start time",
           );
         }
 
@@ -830,7 +829,7 @@ router.put(
             res,
             400,
             null,
-            "Session time conflicts with existing session in this classroom"
+            "Session time conflicts with existing session in this classroom",
           );
         }
       }
@@ -876,13 +875,13 @@ router.put(
         res,
         200,
         updatedSession,
-        "Session updated successfully"
+        "Session updated successfully",
       );
     } catch (error) {
       console.error("Error updating classroom session:", error);
       return sendResponse(res, 500, null, "Failed to update classroom session");
     }
-  }
+  },
 );
 
 // DELETE /classrooms/:classroomId/sessions/:sessionId - Delete a classroom session
@@ -914,7 +913,7 @@ router.delete(
           res,
           404,
           null,
-          "Session not found in this classroom"
+          "Session not found in this classroom",
         );
       }
 
@@ -924,7 +923,7 @@ router.delete(
           res,
           400,
           null,
-          "Cannot delete session with existing attendance records. Please remove attendance records first."
+          "Cannot delete session with existing attendance records. Please remove attendance records first.",
         );
       }
 
@@ -938,7 +937,7 @@ router.delete(
       console.error("Error deleting classroom session:", error);
       return sendResponse(res, 500, null, "Failed to delete classroom session");
     }
-  }
+  },
 );
 
 // GET /classrooms/:id/search-students - Search students in a classroom
@@ -994,7 +993,8 @@ router.get("/:id/search-students", authenticateToken, async (req: any, res) => {
           lastName: true,
           email: true,
           phone: true,
-          faceId: true,
+          hasFaceRegistered: true,
+          faceRegisteredAt: true,
           createdAt: true,
         },
         orderBy: [{ firstName: "asc" }, { lastName: "asc" }],

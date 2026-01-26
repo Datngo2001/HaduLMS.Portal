@@ -2,7 +2,6 @@ version: "3.8"
 
 services:
   backend:
-    image: datngo2001/hadu-lms-backend:latest
     environment:
       NODE_ENV: production
       PORT: 3001
@@ -15,15 +14,16 @@ services:
       - face-recognition-service
 
   face-recognition-service:
-    image: datngo2001/hadu-lms-face-service:latest
     environment:
       SERVICE_PORT: 8001
       HOST: 0.0.0.0
       CONFIDENCE_THRESHOLD: 0.6
       FACE_ENCODINGS_DIR: /app/face_encodings
       DEBUG: "true"
+      USE_BLOB_STORAGE: "true"
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING}
+      AZURE_STORAGE_CONTAINER_NAME: ${AZURE_STORAGE_CONTAINER_NAME:-face-encodings}
 
   frontend:
-    image: datngo2001/hadu-lms-frontend:latest
     depends_on:
       - backend

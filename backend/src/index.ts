@@ -1,10 +1,10 @@
-import { PrismaClient } from "@prisma/client";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
+import { prisma } from "./prismaClient";
 
 // Import routes
 import attendanceRoutes from "./routes/attendance";
@@ -16,9 +16,6 @@ import userRoutes from "./routes/users";
 
 // Load environment variables
 dotenv.config();
-
-// Initialize Prisma Client (will be configured after database config is loaded)
-export let prisma: PrismaClient;
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -117,8 +114,6 @@ process.on("SIGTERM", async () => {
 // Initialize database and start server
 async function startServer() {
   try {
-    prisma = new PrismaClient();
-
     // Test the database connection
     await prisma.$connect();
     console.log("✅ Database connected successfully");

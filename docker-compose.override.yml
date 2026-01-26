@@ -17,7 +17,6 @@ services:
       - /app/node_modules
       - /app/dist
       - ./backend/uploads:/app/uploads
-    command: ["npm", "run", "dev:docker"]
     ports:
       - "3001:3001"
       - "9229:9229" # Debug port for Node.js
@@ -45,18 +44,36 @@ services:
       - FACE_ENCODINGS_DIR=/app/face_encodings
       - DEBUG=true
       - ALLOWED_HOSTS=backend
+      - AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;
+      - AZURE_STORAGE_CONTAINER_NAME=face-encodings
+      - USE_BLOB_STORAGE=true
     volumes:
       - ./face-service:/app
       - ./face-service/face_encodings:/app/face_encodings
       - ./face-service/logs:/app/logs
       - /app/__pycache__
     restart: unless-stopped
+    depends_on:
+      - azurite
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+    networks:
+      - app-network
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    ports:
+      - "10000:10000" # Blob service
+      - "10001:10001" # Queue service
+      - "10002:10002" # Table service
+    volumes:
+      - azurite-data:/data
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --loose
+    restart: unless-stopped
     networks:
       - app-network
 
@@ -70,6 +87,8 @@ services:
       - "3000:3000" # Expose for development
     depends_on:
       - backend
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8080/api
     restart: unless-stopped
     networks:
       - app-network
@@ -90,17 +109,20 @@ services:
     networks:
       - app-network
 
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-    depends_on:
-      - nginx
-    restart: unless-stopped
-    networks:
-      - app-network
-    environment:
-      - TUNNEL_ORIGIN_SERVER_NAME=nginx
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+  #   depends_on:
+  #     - nginx
+  #   restart: unless-stopped
+  #   networks:
+  #     - app-network
+  #   environment:
+  #     - TUNNEL_ORIGIN_SERVER_NAME=nginx
 
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  azurite-data:

@@ -1,12 +1,13 @@
 import bcrypt from "bcryptjs";
 import express from "express";
 import { body, param, query } from "express-validator";
-import { prisma } from "../index";
 import {
   AuthenticatedRequest,
   authenticateToken,
   requireAdmin,
 } from "../middleware/auth";
+import { prisma } from "../prismaClient";
+import { FaceRecognitionFactory } from "../services/faceRecognitionFactory";
 import {
   asyncHandler,
   handleValidationErrors,
@@ -14,6 +15,7 @@ import {
 } from "../utils/response";
 
 const router = express.Router();
+const faceService = FaceRecognitionFactory.getService();
 
 // Get current user profile
 router.get(
@@ -29,6 +31,8 @@ router.get(
         lastName: true,
         role: true,
         avatar: true,
+        hasFaceRegistered: true,
+        faceRegisteredAt: true,
         createdAt: true,
       },
     });
@@ -38,7 +42,7 @@ router.get(
     }
 
     return sendResponse(res, 200, user);
-  })
+  }),
 );
 
 // Get user's enrollments
@@ -68,7 +72,7 @@ router.get(
     });
 
     return sendResponse(res, 200, enrollments);
-  })
+  }),
 );
 
 // Get user's created courses (for teachers/admins)
@@ -81,7 +85,7 @@ router.get(
         res,
         403,
         null,
-        "Students cannot access this endpoint"
+        "Students cannot access this endpoint",
       );
     }
 
@@ -99,7 +103,7 @@ router.get(
     });
 
     return sendResponse(res, 200, courses);
-  })
+  }),
 );
 
 // Update user profile
@@ -127,12 +131,14 @@ router.put(
         lastName: true,
         role: true,
         avatar: true,
+        hasFaceRegistered: true,
+        faceRegisteredAt: true,
         createdAt: true,
       },
     });
 
     return sendResponse(res, 200, user);
-  })
+  }),
 );
 
 // Admin-only routes for user management
@@ -187,6 +193,8 @@ router.get(
           avatar: true,
           phone: true,
           isActive: true,
+          hasFaceRegistered: true,
+          faceRegisteredAt: true,
           createdAt: true,
           _count: {
             select: {
@@ -211,7 +219,7 @@ router.get(
         totalPages: Math.ceil(total / parseInt(limit as string)),
       },
     });
-  })
+  }),
 );
 
 // Get user by ID (Admin only)
@@ -236,6 +244,8 @@ router.get(
         avatar: true,
         phone: true,
         isActive: true,
+        hasFaceRegistered: true,
+        faceRegisteredAt: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -252,7 +262,7 @@ router.get(
     }
 
     return sendResponse(res, 200, user);
-  })
+  }),
 );
 
 // Create user (Admin only)
@@ -283,7 +293,7 @@ router.post(
         res,
         400,
         null,
-        "User already exists with this email"
+        "User already exists with this email",
       );
     }
 
@@ -310,12 +320,14 @@ router.post(
         avatar: true,
         phone: true,
         isActive: true,
+        hasFaceRegistered: true,
+        faceRegisteredAt: true,
         createdAt: true,
       },
     });
 
     return sendResponse(res, 201, user, "User created successfully");
-  })
+  }),
 );
 
 // Update user (Admin only)
@@ -358,7 +370,7 @@ router.put(
           res,
           400,
           null,
-          "Email already taken by another user"
+          "Email already taken by another user",
         );
       }
     }
@@ -391,13 +403,15 @@ router.put(
         avatar: true,
         phone: true,
         isActive: true,
+        hasFaceRegistered: true,
+        faceRegisteredAt: true,
         createdAt: true,
         updatedAt: true,
       },
     });
 
     return sendResponse(res, 200, user, "User updated successfully");
-  })
+  }),
 );
 
 // Toggle user status (Admin only)
@@ -429,6 +443,8 @@ router.patch(
         avatar: true,
         phone: true,
         isActive: true,
+        hasFaceRegistered: true,
+        faceRegisteredAt: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -436,7 +452,7 @@ router.patch(
 
     const action = isActive ? "enabled" : "disabled";
     return sendResponse(res, 200, user, `User ${action} successfully`);
-  })
+  }),
 );
 
 export default router;

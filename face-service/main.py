@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import uvicorn
 
 from face_recognition_service import FaceRecognitionService
+from blob_storage_service import BlobStorageService
 
 # Load environment variables
 load_dotenv()
@@ -38,10 +39,28 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],  # Restrict headers
 )
 
+# Initialize storage backend
+storage_backend = None
+use_blob_storage = os.getenv("USE_BLOB_STORAGE", "false").lower() == "true"
+
+if use_blob_storage:
+    try:
+        connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+        container_name = os.getenv("AZURE_STORAGE_CONTAINER_NAME", "face-encodings")
+        
+        if connection_string:
+            storage_backend = BlobStorageService(connection_string, container_name)
+            logger.info("Using Azure Blob Storage for face encodings")
+        else:
+            logger.warning("Blob storage enabled but connection string not found. Using filesystem.")
+    except Exception as e:
+        logger.error(f"Failed to initialize blob storage: {str(e)}. Using filesystem.")
+
 # Initialize face recognition service
 face_service = FaceRecognitionService(
     face_encodings_dir=os.getenv("FACE_ENCODINGS_DIR", "./face_encodings"),
-    confidence_threshold=float(os.getenv("CONFIDENCE_THRESHOLD", "0.6"))
+    confidence_threshold=float(os.getenv("CONFIDENCE_THRESHOLD", "0.6")),
+    storage_backend=storage_backend
 )
 
 # Security middleware to validate requests

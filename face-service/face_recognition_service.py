@@ -6,20 +6,28 @@ import face_recognition
 import cv2
 from PIL import Image
 from io import BytesIO
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Union
 import logging
 
 logger = logging.getLogger(__name__)
 
 class FaceRecognitionService:
-    def __init__(self, face_encodings_dir: str = "./face_encodings", confidence_threshold: float = 0.6):
+    def __init__(
+        self, 
+        face_encodings_dir: str = "./face_encodings", 
+        confidence_threshold: float = 0.6,
+        storage_backend = None  # BlobStorageService or None for filesystem
+    ):
         self.face_encodings_dir = face_encodings_dir
         self.confidence_threshold = confidence_threshold
+        self.storage_backend = storage_backend
         
-        # Create face encodings directory if it doesn't exist
-        os.makedirs(face_encodings_dir, exist_ok=True)
-        
-        logger.info(f"FaceRecognitionService initialized with encodings dir: {face_encodings_dir}")
+        # Create face encodings directory if using filesystem
+        if storage_backend is None:
+            os.makedirs(face_encodings_dir, exist_ok=True)
+            logger.info(f"FaceRecognitionService initialized with filesystem storage: {face_encodings_dir}")
+        else:
+            logger.info(f"FaceRecognitionService initialized with Azure Blob Storage")
     
     def _base64_to_image(self, base64_string: str) -> np.ndarray:
         """Convert base64 string to OpenCV image format."""
@@ -51,40 +59,55 @@ class FaceRecognitionService:
         return os.path.join(self.face_encodings_dir, f"{user_id}.pkl")
     
     def _save_face_encoding(self, user_id: str, face_encoding: np.ndarray) -> None:
-        """Save face encoding to file."""
+        """Save face encoding to storage backend."""
         try:
-            encoding_path = self._get_face_encoding_path(user_id)
-            with open(encoding_path, 'wb') as f:
-                pickle.dump(face_encoding, f)
+            if self.storage_backend:
+                # Use blob storage
+                self.storage_backend.save_encoding(user_id, face_encoding)
+            else:
+                # Use filesystem
+                encoding_path = self._get_face_encoding_path(user_id)
+                with open(encoding_path, 'wb') as f:
+                    pickle.dump(face_encoding, f)
             logger.info(f"Face encoding saved for user: {user_id}")
         except Exception as e:
             logger.error(f"Error saving face encoding for user {user_id}: {str(e)}")
             raise
     
     def _load_face_encoding(self, user_id: str) -> Optional[np.ndarray]:
-        """Load face encoding from file."""
+        """Load face encoding from storage backend."""
         try:
-            encoding_path = self._get_face_encoding_path(user_id)
-            if not os.path.exists(encoding_path):
-                return None
-            
-            with open(encoding_path, 'rb') as f:
-                face_encoding = pickle.load(f)
-            return face_encoding
+            if self.storage_backend:
+                # Use blob storage
+                return self.storage_backend.load_encoding(user_id)
+            else:
+                # Use filesystem
+                encoding_path = self._get_face_encoding_path(user_id)
+                if not os.path.exists(encoding_path):
+                    return None
+                
+                with open(encoding_path, 'rb') as f:
+                    face_encoding = pickle.load(f)
+                return face_encoding
         except Exception as e:
             logger.error(f"Error loading face encoding for user {user_id}: {str(e)}")
             return None
     
     def _get_all_face_encodings(self) -> dict:
-        """Load all face encodings from storage."""
+        """Load all face encodings from storage backend."""
         encodings = {}
         try:
-            for filename in os.listdir(self.face_encodings_dir):
-                if filename.endswith('.pkl'):
-                    user_id = filename[:-4]  # Remove .pkl extension
-                    encoding = self._load_face_encoding(user_id)
-                    if encoding is not None:
-                        encodings[user_id] = encoding
+            if self.storage_backend:
+                # Use blob storage
+                encodings = self.storage_backend.list_all_encodings()
+            else:
+                # Use filesystem
+                for filename in os.listdir(self.face_encodings_dir):
+                    if filename.endswith('.pkl'):
+                        user_id = filename[:-4]  # Remove .pkl extension
+                        encoding = self._load_face_encoding(user_id)
+                        if encoding is not None:
+                            encodings[user_id] = encoding
         except Exception as e:
             logger.error(f"Error loading all face encodings: {str(e)}")
         
@@ -226,15 +249,20 @@ class FaceRecognitionService:
             bool: True if deletion successful, False if user not found
         """
         try:
-            encoding_path = self._get_face_encoding_path(user_id)
-            
-            if not os.path.exists(encoding_path):
-                logger.warning(f"No face data found for user: {user_id}")
-                return False
-            
-            os.remove(encoding_path)
-            logger.info(f"Successfully deleted face data for user: {user_id}")
-            return True
+            if self.storage_backend:
+                # Use blob storage
+                return self.storage_backend.delete_encoding(user_id)
+            else:
+                # Use filesystem
+                encoding_path = self._get_face_encoding_path(user_id)
+                
+                if not os.path.exists(encoding_path):
+                    logger.warning(f"No face data found for user: {user_id}")
+                    return False
+                
+                os.remove(encoding_path)
+                logger.info(f"Successfully deleted face data for user: {user_id}")
+                return True
             
         except Exception as e:
             logger.error(f"Error deleting face data for user {user_id}: {str(e)}")

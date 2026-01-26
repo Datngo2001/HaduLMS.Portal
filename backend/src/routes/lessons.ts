@@ -1,15 +1,23 @@
-import express from 'express';
-import { param } from 'express-validator';
-import { prisma } from '../index';
-import { authenticateToken, requireTeacher, AuthenticatedRequest } from '../middleware/auth';
-import { sendResponse, handleValidationErrors, asyncHandler } from '../utils/response';
+import express from "express";
+import { param } from "express-validator";
+import {
+  AuthenticatedRequest,
+  authenticateToken,
+  requireTeacher,
+} from "../middleware/auth";
+import { prisma } from "../prismaClient";
+import {
+  asyncHandler,
+  handleValidationErrors,
+  sendResponse,
+} from "../utils/response";
 
 const router = express.Router();
 
 // Get lessons for a course
 router.get(
-  '/course/:courseId',
-  [param('courseId').isString()],
+  "/course/:courseId",
+  [param("courseId").isString()],
   asyncHandler(async (req: express.Request, res: express.Response) => {
     if (handleValidationErrors(req, res)) return;
 
@@ -20,7 +28,7 @@ router.get(
         courseId,
         isPublished: true,
       },
-      orderBy: { order: 'asc' },
+      orderBy: { order: "asc" },
       select: {
         id: true,
         title: true,
@@ -32,13 +40,13 @@ router.get(
     });
 
     return sendResponse(res, 200, lessons);
-  })
+  }),
 );
 
 // Get lesson by ID
 router.get(
-  '/:id',
-  [param('id').isString()],
+  "/:id",
+  [param("id").isString()],
   asyncHandler(async (req: express.Request, res: express.Response) => {
     if (handleValidationErrors(req, res)) return;
 
@@ -64,23 +72,30 @@ router.get(
     });
 
     if (!lesson || !lesson.isPublished) {
-      return sendResponse(res, 404, null, 'Lesson not found');
+      return sendResponse(res, 404, null, "Lesson not found");
     }
 
     return sendResponse(res, 200, lesson);
-  })
+  }),
 );
 
 // Create lesson (Teachers and Admins only)
 router.post(
-  '/',
+  "/",
   authenticateToken,
   requireTeacher,
   asyncHandler(async (req: AuthenticatedRequest, res: express.Response) => {
-    const { title, content, courseId, videoUrl, duration, order = 0 } = req.body;
+    const {
+      title,
+      content,
+      courseId,
+      videoUrl,
+      duration,
+      order = 0,
+    } = req.body;
 
     if (!title || !courseId) {
-      return sendResponse(res, 400, null, 'Title and courseId are required');
+      return sendResponse(res, 400, null, "Title and courseId are required");
     }
 
     // Check if course exists and user has permission
@@ -89,12 +104,17 @@ router.post(
     });
 
     if (!course) {
-      return sendResponse(res, 404, null, 'Course not found');
+      return sendResponse(res, 404, null, "Course not found");
     }
 
     // Only course creator or admin can add lessons
-    if (course.creatorId !== req.user!.id && req.user!.role !== 'ADMIN') {
-      return sendResponse(res, 403, null, 'Not authorized to add lessons to this course');
+    if (course.creatorId !== req.user!.id && req.user!.role !== "ADMIN") {
+      return sendResponse(
+        res,
+        403,
+        null,
+        "Not authorized to add lessons to this course",
+      );
     }
 
     const lesson = await prisma.lesson.create({
@@ -118,15 +138,15 @@ router.post(
     });
 
     return sendResponse(res, 201, lesson);
-  })
+  }),
 );
 
 // Update lesson (Teachers and Admins only)
 router.put(
-  '/:id',
+  "/:id",
   authenticateToken,
   requireTeacher,
-  [param('id').isString()],
+  [param("id").isString()],
   asyncHandler(async (req: AuthenticatedRequest, res: express.Response) => {
     if (handleValidationErrors(req, res)) return;
 
@@ -142,12 +162,20 @@ router.put(
     });
 
     if (!existingLesson) {
-      return sendResponse(res, 404, null, 'Lesson not found');
+      return sendResponse(res, 404, null, "Lesson not found");
     }
 
     // Only course creator or admin can update lessons
-    if (existingLesson.course.creatorId !== req.user!.id && req.user!.role !== 'ADMIN') {
-      return sendResponse(res, 403, null, 'Not authorized to update this lesson');
+    if (
+      existingLesson.course.creatorId !== req.user!.id &&
+      req.user!.role !== "ADMIN"
+    ) {
+      return sendResponse(
+        res,
+        403,
+        null,
+        "Not authorized to update this lesson",
+      );
     }
 
     const lesson = await prisma.lesson.update({
@@ -156,7 +184,9 @@ router.put(
         ...(title && { title }),
         ...(content !== undefined && { content }),
         ...(videoUrl !== undefined && { videoUrl }),
-        ...(duration !== undefined && { duration: duration ? parseInt(duration) : null }),
+        ...(duration !== undefined && {
+          duration: duration ? parseInt(duration) : null,
+        }),
         ...(order !== undefined && { order: parseInt(order) }),
         ...(isPublished !== undefined && { isPublished }),
       },
@@ -171,15 +201,15 @@ router.put(
     });
 
     return sendResponse(res, 200, lesson);
-  })
+  }),
 );
 
 // Delete lesson (Teachers and Admins only)
 router.delete(
-  '/:id',
+  "/:id",
   authenticateToken,
   requireTeacher,
-  [param('id').isString()],
+  [param("id").isString()],
   asyncHandler(async (req: AuthenticatedRequest, res: express.Response) => {
     if (handleValidationErrors(req, res)) return;
 
@@ -194,20 +224,28 @@ router.delete(
     });
 
     if (!existingLesson) {
-      return sendResponse(res, 404, null, 'Lesson not found');
+      return sendResponse(res, 404, null, "Lesson not found");
     }
 
     // Only course creator or admin can delete lessons
-    if (existingLesson.course.creatorId !== req.user!.id && req.user!.role !== 'ADMIN') {
-      return sendResponse(res, 403, null, 'Not authorized to delete this lesson');
+    if (
+      existingLesson.course.creatorId !== req.user!.id &&
+      req.user!.role !== "ADMIN"
+    ) {
+      return sendResponse(
+        res,
+        403,
+        null,
+        "Not authorized to delete this lesson",
+      );
     }
 
     await prisma.lesson.delete({
       where: { id },
     });
 
-    return sendResponse(res, 200, { message: 'Lesson deleted successfully' });
-  })
+    return sendResponse(res, 200, { message: "Lesson deleted successfully" });
+  }),
 );
 
 export default router;
