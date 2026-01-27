@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - staging
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-preview-env.yml"
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
