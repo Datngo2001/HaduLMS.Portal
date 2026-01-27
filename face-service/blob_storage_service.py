@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class BlobStorageService:
     """Service for managing face encodings in Azure Blob Storage."""
     
-    def __init__(self, container_name: str, connection_string: Optional[str] = None, storage_account_name: Optional[str] = None, client_id: Optional[str] = None):
+    def __init__(self, container_name: str, connection_string: Optional[str] = None, resource_endpoint: Optional[str] = None, client_id: Optional[str] = None):
         """
         Initialize the Blob Storage Service.
         Prioritizes managed identity authentication over connection string.
@@ -20,12 +20,12 @@ class BlobStorageService:
         Args:
             container_name: Name of the blob container
             connection_string: Azure Storage connection string (optional, fallback)
-            storage_account_name: Storage account name for managed identity (optional)
+            resource_endpoint: Azure Storage resource endpoint for managed identity (optional)
             client_id: Client ID for user-assigned managed identity (optional)
         """
         self.container_name = container_name
         self.connection_string = connection_string
-        self.storage_account_name = storage_account_name
+        self.resource_endpoint = resource_endpoint
         self.client_id = client_id
         self.blob_service_client = None
         self.container_client = None
@@ -42,7 +42,7 @@ class BlobStorageService:
         Prioritizes managed identity over connection string."""
         try:
             # Try managed identity first
-            if self.storage_account_name:
+            if self.resource_endpoint:
                 try:
                     logger.info("Attempting to authenticate using managed identity...")
                     # Use user-assigned managed identity if client_id is provided
@@ -52,7 +52,7 @@ class BlobStorageService:
                     else:
                         logger.info("Using DefaultAzureCredential for authentication")
                         credential = DefaultAzureCredential()
-                    account_url = f"https://{self.storage_account_name}.blob.core.windows.net"
+                    account_url = self.resource_endpoint
                     
                     self.blob_service_client = BlobServiceClient(
                         account_url=account_url,
@@ -67,7 +67,7 @@ class BlobStorageService:
                     # Verify authentication works
                     try:
                         self.container_client.get_container_properties()
-                        logger.info(f"Successfully authenticated using managed identity for account: {self.storage_account_name}")
+                        logger.info(f"Successfully authenticated using managed identity for endpoint: {self.resource_endpoint}")
                     except ResourceNotFoundError:
                         # Container doesn't exist yet, try to create it
                         self.container_client.create_container()
@@ -103,7 +103,7 @@ class BlobStorageService:
                     else:
                         logger.warning(f"Container creation warning: {str(e)}")
             else:
-                raise ValueError("No authentication method available. Provide either storage_account_name or connection_string.")
+                raise ValueError("No authentication method available. Provide either resource_endpoint or connection_string.")
                     
         except Exception as e:
             logger.error(f"Error initializing storage: {str(e)}")
