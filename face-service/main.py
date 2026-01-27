@@ -48,14 +48,16 @@ if use_blob_storage:
         storage_account_name = os.getenv("AZURE_STORAGE_ACCOUNT_NAME")
         connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
         container_name = os.getenv("AZURE_STORAGE_CONTAINER_NAME", "face-encodings")
+        client_id = os.getenv("AZURE_CLIENT_ID")  # For user-assigned managed identity
         
         if storage_account_name or connection_string:
             storage_backend = BlobStorageService(
                 container_name=container_name,
                 connection_string=connection_string,
-                storage_account_name=storage_account_name
+                storage_account_name=storage_account_name,
+                client_id=client_id
             )
-            auth_method = "managed identity" if storage_account_name else "connection string"
+            auth_method = "user-assigned managed identity" if client_id else ("managed identity" if storage_account_name else "connection string")
             logger.info(f"Using Azure Blob Storage for face encodings (auth: {auth_method})")
         else:
             logger.warning("Blob storage enabled but no authentication method found. Using filesystem.")
