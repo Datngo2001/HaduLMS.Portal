@@ -71,40 +71,6 @@ face_service = FaceRecognitionService(
     storage_backend=storage_backend
 )
 
-# Security middleware to validate requests
-@app.middleware("http")
-async def validate_request_source(request: Request, call_next):
-    """Validate that requests come from allowed sources only."""
-    
-    # Allow health checks from anywhere (for Docker healthcheck)
-    if request.url.path == "/health":
-        response = await call_next(request)
-        return response
-    
-    # Get client IP and host header
-    client_host = request.client.host if request.client else "unknown"
-    host_header = request.headers.get("host", "")
-    
-    # Get allowed hosts from environment
-    allowed_hosts = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
-    allowed_hosts = [host.strip() for host in allowed_hosts] + ["localhost", "127.0.0.1"]
-    
-    # Check if request comes from Docker network (backend service)
-    is_docker_internal = any(
-        client_host.startswith(prefix) for prefix in ["172.", "10.", "192.168."]
-    )
-    
-    # Allow requests from Docker internal network or localhost
-    if is_docker_internal or client_host in allowed_hosts:
-        response = await call_next(request)
-        return response
-    
-    logger.warning(f"Rejected request from unauthorized source: {client_host}, host: {host_header}")
-    raise HTTPException(
-        status_code=403, 
-        detail="Access denied. This service is only accessible from authorized sources."
-    )
-
 # Pydantic models
 class RegisterFaceRequest(BaseModel):
     user_id: str
