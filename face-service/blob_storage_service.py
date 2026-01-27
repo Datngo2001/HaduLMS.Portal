@@ -4,6 +4,7 @@ import logging
 from typing import Optional
 from azure.storage.blob import BlobServiceClient, ContainerClient
 from azure.core.exceptions import ResourceNotFoundError, AzureError
+from azure.identity import DefaultAzureCredential
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -11,16 +12,19 @@ logger = logging.getLogger(__name__)
 class BlobStorageService:
     """Service for managing face encodings in Azure Blob Storage."""
     
-    def __init__(self, connection_string: str, container_name: str):
+    def __init__(self, container_name: str, connection_string: Optional[str] = None, storage_account_name: Optional[str] = None):
         """
         Initialize the Blob Storage Service.
+        Prioritizes managed identity authentication over connection string.
         
         Args:
-            connection_string: Azure Storage connection string
             container_name: Name of the blob container
+            connection_string: Azure Storage connection string (optional, fallback)
+            storage_account_name: Storage account name for managed identity (optional)
         """
-        self.connection_string = connection_string
         self.container_name = container_name
+        self.connection_string = connection_string
+        self.storage_account_name = storage_account_name
         self.blob_service_client = None
         self.container_client = None
         
@@ -32,26 +36,66 @@ class BlobStorageService:
             raise
     
     def _initialize_storage(self):
-        """Initialize blob service and create container if it doesn't exist."""
+        """Initialize blob service and create container if it doesn't exist.
+        Prioritizes managed identity over connection string."""
         try:
-            self.blob_service_client = BlobServiceClient.from_connection_string(
-                self.connection_string
-            )
+            # Try managed identity first
+            if self.storage_account_name:
+                try:
+                    logger.info("Attempting to authenticate using managed identity...")
+                    credential = DefaultAzureCredential()
+                    account_url = f"https://{self.storage_account_name}.blob.core.windows.net"
+                    
+                    self.blob_service_client = BlobServiceClient(
+                        account_url=account_url,
+                        credential=credential
+                    )
+                    
+                    # Test the connection by attempting to get container properties
+                    self.container_client = self.blob_service_client.get_container_client(
+                        self.container_name
+                    )
+                    
+                    # Verify authentication works
+                    try:
+                        self.container_client.get_container_properties()
+                        logger.info(f"Successfully authenticated using managed identity for account: {self.storage_account_name}")
+                    except ResourceNotFoundError:
+                        # Container doesn't exist yet, try to create it
+                        self.container_client.create_container()
+                        logger.info(f"Created container using managed identity: {self.container_name}")
+                    
+                    return  # Successfully initialized with managed identity
+                    
+                except Exception as e:
+                    logger.warning(f"Managed identity authentication failed: {str(e)}")
+                    if not self.connection_string:
+                        raise  # No fallback available
+                    logger.info("Falling back to connection string authentication...")
             
-            # Get or create container
-            self.container_client = self.blob_service_client.get_container_client(
-                self.container_name
-            )
-            
-            # Try to create container if it doesn't exist
-            try:
-                self.container_client.create_container()
-                logger.info(f"Created container: {self.container_name}")
-            except Exception as e:
-                if "ContainerAlreadyExists" in str(e):
-                    logger.info(f"Container already exists: {self.container_name}")
-                else:
-                    logger.warning(f"Container creation warning: {str(e)}")
+            # Fallback to connection string
+            if self.connection_string:
+                logger.info("Using connection string for authentication...")
+                self.blob_service_client = BlobServiceClient.from_connection_string(
+                    self.connection_string
+                )
+                
+                # Get or create container
+                self.container_client = self.blob_service_client.get_container_client(
+                    self.container_name
+                )
+                
+                # Try to create container if it doesn't exist
+                try:
+                    self.container_client.create_container()
+                    logger.info(f"Created container: {self.container_name}")
+                except Exception as e:
+                    if "ContainerAlreadyExists" in str(e):
+                        logger.info(f"Container already exists: {self.container_name}")
+                    else:
+                        logger.warning(f"Container creation warning: {str(e)}")
+            else:
+                raise ValueError("No authentication method available. Provide either storage_account_name or connection_string.")
                     
         except Exception as e:
             logger.error(f"Error initializing storage: {str(e)}")
