@@ -1,12 +1,11 @@
+from __future__ import annotations
+
 import os
 import base64
 import pickle
-import numpy as np
-import face_recognition
-import cv2
 from PIL import Image
 from io import BytesIO
-from typing import Optional, List, Tuple, Union
+from typing import Optional, List, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
@@ -28,6 +27,21 @@ class FaceRecognitionService:
             logger.info(f"FaceRecognitionService initialized with filesystem storage: {face_encodings_dir}")
         else:
             logger.info(f"FaceRecognitionService initialized with Azure Blob Storage")
+
+    def _lazy_imports(self):
+        """Load heavy libraries only when needed to reduce cold start time."""
+        global np, face_recognition
+        if 'np' not in globals():
+            import numpy as np_local
+            globals()['np'] = np_local
+        if 'face_recognition' not in globals():
+            import face_recognition as fr_local
+            globals()['face_recognition'] = fr_local
+        return globals()['np'], globals()['face_recognition']
+
+    def warmup(self) -> None:
+        """Preload heavy libraries."""
+        self._lazy_imports()
     
     def _base64_to_image(self, base64_string: str) -> np.ndarray:
         """Convert base64 string to OpenCV image format."""
@@ -47,6 +61,7 @@ class FaceRecognitionService:
                 pil_image = pil_image.convert('RGB')
             
             # Convert to numpy array (OpenCV format)
+            np, _ = self._lazy_imports()
             opencv_image = np.array(pil_image)
             
             return opencv_image
@@ -129,6 +144,7 @@ class FaceRecognitionService:
             Exception: If registration fails
         """
         try:
+            _, face_recognition = self._lazy_imports()
             # Check if user already has a face registered
             if self._load_face_encoding(user_id) is not None:
                 logger.warning(f"User {user_id} already has a face registered")
@@ -179,6 +195,7 @@ class FaceRecognitionService:
             ValueError: If no face found in image or invalid image format
         """
         try:
+            np, face_recognition = self._lazy_imports()
             # Convert base64 to image
             image = self._base64_to_image(image_base64)
             

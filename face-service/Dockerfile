@@ -1,23 +1,30 @@
-# Use Python 3.9 slim image
-FROM python:3.9-slim
+# Builder stage
+FROM python:3.9-slim AS builder
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install build dependencies
 RUN apt-get update && apt-get install -y \
     cmake \
     build-essential \
-    libopencv-dev \
-    python3-opencv \
-    libboost-all-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Build wheels for Python dependencies
+RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
+
+# Runtime stage
+FROM python:3.9-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies from wheels
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache-dir /wheels/*
 
 # Copy application code
 COPY . .
