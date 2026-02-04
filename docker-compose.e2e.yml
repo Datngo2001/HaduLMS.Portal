@@ -1,0 +1,217 @@
+# E2E Testing Docker Compose
+# Usage: docker-compose -f docker-compose.e2e.yml up --build --abort-on-container-exit
+# Or: docker-compose -f docker-compose.e2e.yml up --build e2e-tests
+
+services:
+  # SQL Server for E2E testing
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=E2eTest@123456
+      - MSSQL_PID=Express
+      - MSSQL_COLLATION=SQL_Latin1_General_CP1_CI_AS
+    ports:
+      - "1433:1433"
+    volumes:
+      - db-data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "E2eTest@123456" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - e2e-network
+
+  # Azure Blob Storage emulator
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --loose
+    ports:
+      - "10000:10000" # Blob service
+      - "10001:10001" # Queue service
+      - "10002:10002" # Table service
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:10000/', (r) => process.exit(r.statusCode === 400 ? 0 : 1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - e2e-network
+    volumes:
+      - azurite-data:/data
+
+  # Face Recognition Service
+  face-recognition-service:
+    build: ./face-service
+    environment:
+      - SERVICE_PORT=8001
+      - HOST=0.0.0.0
+      - CONFIDENCE_THRESHOLD=0.6
+      - FACE_ENCODINGS_DIR=/app/face_encodings
+      - DEBUG=true
+      - USE_BLOB_STORAGE=true
+      - AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;
+      - AZURE_STORAGE_CONTAINER_NAME=face-encodings-e2e
+    depends_on:
+      azurite:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - e2e-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      args:
+        NODE_ENV: test
+    environment:
+      - NODE_ENV=test
+      - PORT=3001
+      - DATABASE_URL=sqlserver://db:1433;database=hadu_lms_e2e;user=sa;password=E2eTest@123456;encrypt=true;trustServerCertificate=true;integratedSecurity=false
+      - JWT_SECRET=e2e-test-jwt-secret-super-secure-key
+      - GOOGLE_CLIENT_ID=test-google-client-id
+      - GOOGLE_CLIENT_SECRET=test-google-client-secret
+      - FACE_RECOGNITION_SERVICE_URL=http://face-recognition-service:8001
+    depends_on:
+      db:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+      face-recognition-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.js"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - e2e-network
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - VITE_API_BASE_URL=http://nginx/api
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - e2e-network
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.e2e.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+      face-recognition-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - e2e-network
+
+  # Database initialization (runs migrations and seeds)
+  db-init:
+    build:
+      context: ./backend
+      args:
+        NODE_ENV: test
+    environment:
+      - NODE_ENV=test
+      - DATABASE_URL=sqlserver://db:1433;database=hadu_lms_e2e;user=sa;password=E2eTest@123456;encrypt=true;trustServerCertificate=true;integratedSecurity=false
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Waiting for database...' &&
+        sleep 5 &&
+        echo 'Running database migrations...' &&
+        npx prisma migrate deploy &&
+        echo 'Seeding database...' &&
+        npx prisma db seed &&
+        echo 'Database initialization complete!'
+      "
+    networks:
+      - e2e-network
+
+  # E2E Test Runner (Playwright)
+  e2e-tests:
+    build:
+      context: ./frontend/tests/e2e
+      dockerfile: Dockerfile
+    environment:
+      - BASE_URL=http://nginx
+      - API_URL=http://nginx/api
+      - CI=true
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    volumes:
+      - ./frontend/tests/e2e/test-results:/app/test-results
+      - ./frontend/tests/e2e/playwright-report:/app/playwright-report
+    depends_on:
+      nginx:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+      face-recognition-service:
+        condition: service_healthy
+    networks:
+      - e2e-network
+    # Run tests and exit
+    command: npx playwright test --reporter=html,list
+
+networks:
+  e2e-network:
+    driver: bridge
+
+volumes:
+  db-data:
+  azurite-data:

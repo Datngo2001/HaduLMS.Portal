@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Test outputs
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Local storage state
+*.storageState.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

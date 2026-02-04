@@ -1,0 +1,11 @@
+node_modules
+**/node_modules
+tests/node_modules
+npm-debug.log
+test-results
+playwright-report
+playwright/.cache
+*.storageState.json
+.DS_Store
+Thumbs.db
+*.log
