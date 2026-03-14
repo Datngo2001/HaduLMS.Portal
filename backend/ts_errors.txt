@@ -1,0 +1,15 @@
+﻿src/presentation/controllers/AttendanceController.ts(188,51): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/presentation/controllers/AttendanceController.ts(188,56): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/presentation/controllers/AttendanceController.ts(191,24): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/presentation/controllers/AttendanceController.ts(191,51): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/presentation/controllers/AttendanceController.ts(192,37): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/presentation/controllers/AttendanceController.ts(196,51): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/presentation/controllers/AttendanceController.ts(219,47): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/presentation/controllers/AttendanceController.ts(220,44): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/presentation/controllers/AttendanceController.ts(221,55): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/presentation/controllers/AttendanceController.ts(222,46): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/presentation/controllers/AttendanceController.ts(229,58): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/presentation/controllers/ClassroomController.ts(30,70): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/presentation/controllers/CourseController.ts(33,61): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
