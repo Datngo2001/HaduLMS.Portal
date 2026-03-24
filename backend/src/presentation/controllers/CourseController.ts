@@ -1,13 +1,25 @@
 import { Request, Response } from "express";
-import { CourseService } from "../../application/services/CourseService";
-import { sendResponse, handleValidationErrors } from "../../utils/response";
-import { AuthenticatedRequest } from "../../middleware/auth";
+import { GetPublishedCoursesQueryHandler } from "../../application/features/Course/queries/GetPublishedCoursesQuery";
+import { GetCourseByIdQueryHandler } from "../../application/features/Course/queries/GetCourseByIdQuery";
+import { CreateCourseCommandHandler } from "../../application/features/Course/commands/CreateCourseCommand";
+import { UpdateCourseCommandHandler } from "../../application/features/Course/commands/UpdateCourseCommand";
+import { EnrollInCourseCommandHandler } from "../../application/features/Course/commands/EnrollInCourseCommand";
+import { sendResponse, handleValidationErrors } from "../utils/response";
+import { AuthenticatedRequest } from "../middleware/auth";
 
 export class CourseController {
-  private courseService: CourseService;
+  private getPublishedCoursesQueryHandler: GetPublishedCoursesQueryHandler;
+  private getCourseByIdQueryHandler: GetCourseByIdQueryHandler;
+  private createCourseCommandHandler: CreateCourseCommandHandler;
+  private updateCourseCommandHandler: UpdateCourseCommandHandler;
+  private enrollInCourseCommandHandler: EnrollInCourseCommandHandler;
 
   constructor() {
-    this.courseService = new CourseService();
+    this.getPublishedCoursesQueryHandler = new GetPublishedCoursesQueryHandler();
+    this.getCourseByIdQueryHandler = new GetCourseByIdQueryHandler();
+    this.createCourseCommandHandler = new CreateCourseCommandHandler();
+    this.updateCourseCommandHandler = new UpdateCourseCommandHandler();
+    this.enrollInCourseCommandHandler = new EnrollInCourseCommandHandler();
   }
 
   getPublishedCourses = async (req: Request, res: Response) => {
@@ -18,7 +30,7 @@ export class CourseController {
       const limit = parseInt(req.query.limit as string) || 10;
       const search = (req.query.search as string) || "";
 
-      const result = await this.courseService.getPublishedCourses(page, limit, search as string);
+      const result = await this.getPublishedCoursesQueryHandler.execute({ page, limit, search: search as string });
       return sendResponse(res, 200, result);
     } catch (error: any) {
       return sendResponse(res, 500, null, error.message || "Internal server error");
@@ -30,7 +42,7 @@ export class CourseController {
       if (handleValidationErrors(req, res)) return;
 
       const { id } = req.params;
-      const course = await this.courseService.getCourseById(id as string);
+      const course = await this.getCourseByIdQueryHandler.execute({ id: id as string });
       return sendResponse(res, 200, course);
     } catch (error: any) {
       if (error.message === "Course not found") {
@@ -42,7 +54,7 @@ export class CourseController {
 
   createCourse = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const course = await this.courseService.createCourse(req.user!.id, req.body);
+      const course = await this.createCourseCommandHandler.execute({ userId: req.user!.id, data: req.body });
       return sendResponse(res, 201, course);
     } catch (error: any) {
       if (error.message === "Title is required") {
@@ -57,7 +69,7 @@ export class CourseController {
       if (handleValidationErrors(req as Request, res)) return;
 
       const { id } = req.params;
-      const course = await this.courseService.updateCourse(req.user!.id, req.user!.role, id, req.body);
+      const course = await this.updateCourseCommandHandler.execute({ userId: req.user!.id, userRole: req.user!.role, courseId: id, data: req.body });
       return sendResponse(res, 200, course);
     } catch (error: any) {
       if (error.message === "Course not found") return sendResponse(res, 404, null, error.message);
@@ -71,7 +83,7 @@ export class CourseController {
       if (handleValidationErrors(req as Request, res)) return;
 
       const { id } = req.params;
-      const enrollment = await this.courseService.enrollInCourse(req.user!.id, id);
+      const enrollment = await this.enrollInCourseCommandHandler.execute({ userId: req.user!.id, courseId: id });
       return sendResponse(res, 201, enrollment);
     } catch (error: any) {
       if (error.message === "Course not found or not available") return sendResponse(res, 404, null, error.message);

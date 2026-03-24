@@ -7,12 +7,12 @@ import helmet from "helmet";
 import { prisma } from "./prismaClient";
 
 // Import routes
-import attendanceRoutes from "./routes/attendance";
-import authRoutes from "./routes/auth";
-import classroomRoutes from "./routes/classrooms";
-import courseRoutes from "./routes/courses";
-import lessonRoutes from "./routes/lessons";
-import userRoutes from "./routes/users";
+import attendanceRoutes from "./presentation/routes/attendance";
+import authRoutes from "./presentation/routes/auth";
+import classroomRoutes from "./presentation/routes/classrooms";
+import courseRoutes from "./presentation/routes/courses";
+import lessonRoutes from "./presentation/routes/lessons";
+import userRoutes from "./presentation/routes/users";
 
 // Load environment variables
 dotenv.config();

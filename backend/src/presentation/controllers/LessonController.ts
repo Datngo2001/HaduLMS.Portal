@@ -1,13 +1,25 @@
 import { Request, Response } from "express";
-import { LessonService } from "../../application/services/LessonService";
-import { sendResponse, handleValidationErrors } from "../../utils/response";
-import { AuthenticatedRequest } from "../../middleware/auth";
+import { GetLessonsByCourseIdQueryHandler } from "../../application/features/Lesson/queries/GetLessonsByCourseIdQuery";
+import { GetLessonByIdQueryHandler } from "../../application/features/Lesson/queries/GetLessonByIdQuery";
+import { CreateLessonCommandHandler } from "../../application/features/Lesson/commands/CreateLessonCommand";
+import { UpdateLessonCommandHandler } from "../../application/features/Lesson/commands/UpdateLessonCommand";
+import { DeleteLessonCommandHandler } from "../../application/features/Lesson/commands/DeleteLessonCommand";
+import { sendResponse, handleValidationErrors } from "../utils/response";
+import { AuthenticatedRequest } from "../middleware/auth";
 
 export class LessonController {
-  private lessonService: LessonService;
+  private getLessonsByCourseIdQueryHandler: GetLessonsByCourseIdQueryHandler;
+  private getLessonByIdQueryHandler: GetLessonByIdQueryHandler;
+  private createLessonCommandHandler: CreateLessonCommandHandler;
+  private updateLessonCommandHandler: UpdateLessonCommandHandler;
+  private deleteLessonCommandHandler: DeleteLessonCommandHandler;
 
   constructor() {
-    this.lessonService = new LessonService();
+    this.getLessonsByCourseIdQueryHandler = new GetLessonsByCourseIdQueryHandler();
+    this.getLessonByIdQueryHandler = new GetLessonByIdQueryHandler();
+    this.createLessonCommandHandler = new CreateLessonCommandHandler();
+    this.updateLessonCommandHandler = new UpdateLessonCommandHandler();
+    this.deleteLessonCommandHandler = new DeleteLessonCommandHandler();
   }
 
   getLessonsByCourseId = async (req: Request, res: Response) => {
@@ -15,7 +27,7 @@ export class LessonController {
       if (handleValidationErrors(req, res)) return;
 
       const courseId = req.params.courseId as string;
-      const lessons = await this.lessonService.getLessonsByCourseId(courseId);
+      const lessons = await this.getLessonsByCourseIdQueryHandler.execute({ courseId });
       return sendResponse(res, 200, lessons);
     } catch (error: any) {
       return sendResponse(res, 500, null, error.message || "Internal server error");
@@ -27,7 +39,7 @@ export class LessonController {
       if (handleValidationErrors(req, res)) return;
 
       const id = req.params.id as string;
-      const lesson = await this.lessonService.getLessonById(id);
+      const lesson = await this.getLessonByIdQueryHandler.execute({ id });
       return sendResponse(res, 200, lesson);
     } catch (error: any) {
       if (error.message === "Lesson not found") {
@@ -39,7 +51,7 @@ export class LessonController {
 
   createLesson = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const lesson = await this.lessonService.createLesson(req.user!.id, req.user!.role, req.body);
+      const lesson = await this.createLessonCommandHandler.execute({ userId: req.user!.id, userRole: req.user!.role, data: req.body });
       return sendResponse(res, 201, lesson);
     } catch (error: any) {
       if (error.message === "Title and courseId are required") return sendResponse(res, 400, null, error.message);
@@ -54,7 +66,7 @@ export class LessonController {
       if (handleValidationErrors(req as Request, res)) return;
 
       const { id } = req.params;
-      const lesson = await this.lessonService.updateLesson(req.user!.id, req.user!.role, id, req.body);
+      const lesson = await this.updateLessonCommandHandler.execute({ userId: req.user!.id, userRole: req.user!.role, id, data: req.body });
       return sendResponse(res, 200, lesson);
     } catch (error: any) {
       if (error.message === "Lesson not found") return sendResponse(res, 404, null, error.message);
@@ -68,7 +80,7 @@ export class LessonController {
       if (handleValidationErrors(req as Request, res)) return;
 
       const { id } = req.params;
-      await this.lessonService.deleteLesson(req.user!.id, req.user!.role, id);
+      await this.deleteLessonCommandHandler.execute({ userId: req.user!.id, userRole: req.user!.role, id });
       return sendResponse(res, 200, { message: "Lesson deleted successfully" });
     } catch (error: any) {
       if (error.message === "Lesson not found") return sendResponse(res, 404, null, error.message);

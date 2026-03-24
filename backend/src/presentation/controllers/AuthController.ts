@@ -1,14 +1,20 @@
 import { Request, Response } from "express";
 import fetch from "node-fetch";
-import { AuthService } from "../../application/services/AuthService";
-import { sendResponse } from "../../utils/response";
-import { AuthenticatedRequest } from "../../middleware/auth";
+import { LoginCommandHandler } from "../../application/features/Auth/commands/LoginCommand";
+import { GoogleLoginCommandHandler } from "../../application/features/Auth/commands/GoogleLoginCommand";
+import { GetMeQueryHandler } from "../../application/features/Auth/queries/GetMeQuery";
+import { sendResponse } from "../utils/response";
+import { AuthenticatedRequest } from "../middleware/auth";
 
 export class AuthController {
-  private authService: AuthService;
+  private loginCommandHandler: LoginCommandHandler;
+  private googleLoginCommandHandler: GoogleLoginCommandHandler;
+  private getMeQueryHandler: GetMeQueryHandler;
 
   constructor() {
-    this.authService = new AuthService();
+    this.loginCommandHandler = new LoginCommandHandler();
+    this.googleLoginCommandHandler = new GoogleLoginCommandHandler();
+    this.getMeQueryHandler = new GetMeQueryHandler();
   }
 
   private setAuthCookie(res: Response, token: string) {
@@ -25,7 +31,7 @@ export class AuthController {
   login = async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
-      const { user, token } = await this.authService.login(email, password);
+      const { user, token } = await this.loginCommandHandler.execute({ email, password });
 
       this.setAuthCookie(res, token);
       return sendResponse(res, 200, { user, token }, undefined);
@@ -53,7 +59,7 @@ export class AuthController {
 
       const googleUserInfo: any = await response.json();
       
-      const { user, token: jwtToken } = await this.authService.googleLogin(googleUserInfo);
+      const { user, token: jwtToken } = await this.googleLoginCommandHandler.execute({ googleUserInfo });
 
       this.setAuthCookie(res, jwtToken);
       return sendResponse(res, 200, { user, token: jwtToken }, undefined);
@@ -68,7 +74,7 @@ export class AuthController {
       if (!req.user?.id) {
         return sendResponse(res, 401, null, "Unauthorized");
       }
-      const user = await this.authService.getMe(req.user.id);
+      const user = await this.getMeQueryHandler.execute({ userId: req.user.id });
       return sendResponse(res, 200, { user }, undefined);
     } catch (error: any) {
       if (error.message === "User not found") {

@@ -1,18 +1,42 @@
 import { Request, Response } from "express";
-import { UserService } from "../../application/services/UserService";
-import { sendResponse, handleValidationErrors } from "../../utils/response";
-import { AuthenticatedRequest } from "../../middleware/auth";
+import { GetProfileQueryHandler } from "../../application/features/User/queries/GetProfileQuery";
+import { GetEnrollmentsQueryHandler } from "../../application/features/User/queries/GetEnrollmentsQuery";
+import { GetCreatedCoursesQueryHandler } from "../../application/features/User/queries/GetCreatedCoursesQuery";
+import { GetUsersQueryHandler } from "../../application/features/User/queries/GetUsersQuery";
+import { GetUserByIdQueryHandler } from "../../application/features/User/queries/GetUserByIdQuery";
+import { UpdateProfileCommandHandler } from "../../application/features/User/commands/UpdateProfileCommand";
+import { CreateUserCommandHandler } from "../../application/features/User/commands/CreateUserCommand";
+import { UpdateUserCommandHandler } from "../../application/features/User/commands/UpdateUserCommand";
+import { ToggleUserStatusCommandHandler } from "../../application/features/User/commands/ToggleUserStatusCommand";
+import { sendResponse, handleValidationErrors } from "../utils/response";
+import { AuthenticatedRequest } from "../middleware/auth";
 
 export class UserController {
-  private userService: UserService;
+  private getProfileQueryHandler: GetProfileQueryHandler;
+  private getEnrollmentsQueryHandler: GetEnrollmentsQueryHandler;
+  private getCreatedCoursesQueryHandler: GetCreatedCoursesQueryHandler;
+  private getUsersQueryHandler: GetUsersQueryHandler;
+  private getUserByIdQueryHandler: GetUserByIdQueryHandler;
+  private updateProfileCommandHandler: UpdateProfileCommandHandler;
+  private createUserCommandHandler: CreateUserCommandHandler;
+  private updateUserCommandHandler: UpdateUserCommandHandler;
+  private toggleUserStatusCommandHandler: ToggleUserStatusCommandHandler;
 
   constructor() {
-    this.userService = new UserService();
+    this.getProfileQueryHandler = new GetProfileQueryHandler();
+    this.getEnrollmentsQueryHandler = new GetEnrollmentsQueryHandler();
+    this.getCreatedCoursesQueryHandler = new GetCreatedCoursesQueryHandler();
+    this.getUsersQueryHandler = new GetUsersQueryHandler();
+    this.getUserByIdQueryHandler = new GetUserByIdQueryHandler();
+    this.updateProfileCommandHandler = new UpdateProfileCommandHandler();
+    this.createUserCommandHandler = new CreateUserCommandHandler();
+    this.updateUserCommandHandler = new UpdateUserCommandHandler();
+    this.toggleUserStatusCommandHandler = new ToggleUserStatusCommandHandler();
   }
 
   getProfile = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await this.userService.getProfile(req.user!.id);
+      const user = await this.getProfileQueryHandler.execute({ userId: req.user!.id });
       if (!user) {
         return sendResponse(res, 404, null, "User not found");
       }
@@ -24,7 +48,7 @@ export class UserController {
 
   getEnrollments = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const enrollments = await this.userService.getEnrollments(req.user!.id);
+      const enrollments = await this.getEnrollmentsQueryHandler.execute({ userId: req.user!.id });
       return sendResponse(res, 200, enrollments);
     } catch (error: any) {
       return sendResponse(res, 500, null, error.message || "Internal server error");
@@ -36,7 +60,7 @@ export class UserController {
       if (req.user!.role === "STUDENT") {
         return sendResponse(res, 403, null, "Students cannot access this endpoint");
       }
-      const courses = await this.userService.getCreatedCourses(req.user!.id);
+      const courses = await this.getCreatedCoursesQueryHandler.execute({ userId: req.user!.id });
       return sendResponse(res, 200, courses);
     } catch (error: any) {
       return sendResponse(res, 500, null, error.message || "Internal server error");
@@ -46,7 +70,7 @@ export class UserController {
   updateProfile = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { firstName, lastName } = req.body;
-      const user = await this.userService.updateProfile(req.user!.id, { firstName, lastName });
+      const user = await this.updateProfileCommandHandler.execute({ userId: req.user!.id, data: { firstName, lastName } });
       
       const { password, ...userWithoutPassword } = user;
       return sendResponse(res, 200, userWithoutPassword);
@@ -64,13 +88,13 @@ export class UserController {
 
       const { search, role, status, page = "1", limit = "10" } = req.query;
       
-      const result = await this.userService.getUsers(
-        search as string,
-        role as string,
-        status as string,
-        parseInt(page as string),
-        parseInt(limit as string)
-      );
+      const result = await this.getUsersQueryHandler.execute({
+        search: search as string,
+        role: role as string,
+        status: status as string,
+        page: parseInt(page as string),
+        limit: parseInt(limit as string)
+      });
 
       return sendResponse(res, 200, result);
     } catch (error: any) {
@@ -83,7 +107,7 @@ export class UserController {
       if (handleValidationErrors(req as Request, res)) return;
 
       const { id } = req.params;
-      const user = await this.userService.getUserById(id);
+      const user = await this.getUserByIdQueryHandler.execute({ id });
 
       return sendResponse(res, 200, user);
     } catch (error: any) {
@@ -98,7 +122,7 @@ export class UserController {
     try {
       if (handleValidationErrors(req as Request, res)) return;
 
-      const user = await this.userService.createUser(req.body);
+      const user = await this.createUserCommandHandler.execute({ data: req.body });
       
       const { password, ...userWithoutPassword } = user;
       return sendResponse(res, 201, userWithoutPassword, "User created successfully");
@@ -115,7 +139,7 @@ export class UserController {
       if (handleValidationErrors(req as Request, res)) return;
 
       const { id } = req.params;
-      const user = await this.userService.updateUser(id, req.body);
+      const user = await this.updateUserCommandHandler.execute({ id, data: req.body });
       
       const { password, ...userWithoutPassword } = user;
       return sendResponse(res, 200, userWithoutPassword, "User updated successfully");
@@ -135,7 +159,7 @@ export class UserController {
       const { id } = req.params;
       const { isActive } = req.body;
       
-      const user = await this.userService.toggleUserStatus(id, isActive, req.user!.id);
+      const user = await this.toggleUserStatusCommandHandler.execute({ id, isActive, requestingUserId: req.user!.id });
       
       const { password, ...userWithoutPassword } = user;
       const action = isActive ? "enabled" : "disabled";

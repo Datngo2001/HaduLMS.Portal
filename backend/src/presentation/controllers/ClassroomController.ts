@@ -1,13 +1,43 @@
 import { Request, Response } from "express";
-import { ClassroomService } from "../../application/services/ClassroomService";
-import { sendResponse, handleValidationErrors } from "../../utils/response";
-import { AuthenticatedRequest } from "../../middleware/auth";
+import { GetClassroomsQueryHandler } from "../../application/features/Classroom/queries/GetClassroomsQuery";
+import { GetClassroomByIdQueryHandler } from "../../application/features/Classroom/queries/GetClassroomByIdQuery";
+import { GetAvailableStudentsQueryHandler } from "../../application/features/Classroom/queries/GetAvailableStudentsQuery";
+import { GetClassroomSessionsQueryHandler } from "../../application/features/Classroom/queries/GetClassroomSessionsQuery";
+import { GetSessionByIdQueryHandler } from "../../application/features/Classroom/queries/GetSessionByIdQuery";
+import { CreateClassroomCommandHandler } from "../../application/features/Classroom/commands/CreateClassroomCommand";
+import { UpdateClassroomCommandHandler } from "../../application/features/Classroom/commands/UpdateClassroomCommand";
+import { DeleteClassroomCommandHandler } from "../../application/features/Classroom/commands/DeleteClassroomCommand";
+import { AssignStudentsCommandHandler } from "../../application/features/Classroom/commands/AssignStudentsCommand";
+import { RemoveStudentCommandHandler } from "../../application/features/Classroom/commands/RemoveStudentCommand";
+import { CreateSessionCommandHandler } from "../../application/features/Classroom/commands/CreateSessionCommand";
+import { sendResponse, handleValidationErrors } from "../utils/response";
+import { AuthenticatedRequest } from "../middleware/auth";
 
 export class ClassroomController {
-  private classroomService: ClassroomService;
+  private getClassroomsQueryHandler: GetClassroomsQueryHandler;
+  private getClassroomByIdQueryHandler: GetClassroomByIdQueryHandler;
+  private getAvailableStudentsQueryHandler: GetAvailableStudentsQueryHandler;
+  private getClassroomSessionsQueryHandler: GetClassroomSessionsQueryHandler;
+  private getSessionByIdQueryHandler: GetSessionByIdQueryHandler;
+  private createClassroomCommandHandler: CreateClassroomCommandHandler;
+  private updateClassroomCommandHandler: UpdateClassroomCommandHandler;
+  private deleteClassroomCommandHandler: DeleteClassroomCommandHandler;
+  private assignStudentsCommandHandler: AssignStudentsCommandHandler;
+  private removeStudentCommandHandler: RemoveStudentCommandHandler;
+  private createSessionCommandHandler: CreateSessionCommandHandler;
 
   constructor() {
-    this.classroomService = new ClassroomService();
+    this.getClassroomsQueryHandler = new GetClassroomsQueryHandler();
+    this.getClassroomByIdQueryHandler = new GetClassroomByIdQueryHandler();
+    this.getAvailableStudentsQueryHandler = new GetAvailableStudentsQueryHandler();
+    this.getClassroomSessionsQueryHandler = new GetClassroomSessionsQueryHandler();
+    this.getSessionByIdQueryHandler = new GetSessionByIdQueryHandler();
+    this.createClassroomCommandHandler = new CreateClassroomCommandHandler();
+    this.updateClassroomCommandHandler = new UpdateClassroomCommandHandler();
+    this.deleteClassroomCommandHandler = new DeleteClassroomCommandHandler();
+    this.assignStudentsCommandHandler = new AssignStudentsCommandHandler();
+    this.removeStudentCommandHandler = new RemoveStudentCommandHandler();
+    this.createSessionCommandHandler = new CreateSessionCommandHandler();
   }
 
   getClassrooms = async (req: Request, res: Response) => {
@@ -17,7 +47,7 @@ export class ClassroomController {
       const search = (req.query.search as string) || "";
       const isActive = req.query.isActive !== undefined ? req.query.isActive === "true" : undefined;
 
-      const result = await this.classroomService.getClassrooms(page, limit, search, isActive);
+      const result = await this.getClassroomsQueryHandler.execute({ page, limit, search, isActive });
       return sendResponse(res, 200, result);
     } catch (error: any) {
       return sendResponse(res, 500, null, error.message || "Failed to fetch classrooms");
@@ -27,7 +57,7 @@ export class ClassroomController {
   getClassroomById = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const classroom = await this.classroomService.getClassroomById(id as string);
+      const classroom = await this.getClassroomByIdQueryHandler.execute({ id: id as string });
       return sendResponse(res, 200, classroom);
     } catch (error: any) {
       if (error.message === "Classroom not found") return sendResponse(res, 404, null, error.message);
@@ -37,7 +67,7 @@ export class ClassroomController {
 
   createClassroom = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const classroom = await this.classroomService.createClassroom(req.body);
+      const classroom = await this.createClassroomCommandHandler.execute(req.body);
       return sendResponse(res, 201, classroom);
     } catch (error: any) {
       if (error.message === "Classroom name is required") return sendResponse(res, 400, null, error.message);
@@ -49,7 +79,7 @@ export class ClassroomController {
   updateClassroom = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const classroom = await this.classroomService.updateClassroom(id, req.body);
+      const classroom = await this.updateClassroomCommandHandler.execute({ id, data: req.body });
       return sendResponse(res, 200, classroom);
     } catch (error: any) {
       if (error.message === "Classroom not found") return sendResponse(res, 404, null, error.message);
@@ -61,7 +91,7 @@ export class ClassroomController {
   deleteClassroom = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
-      await this.classroomService.deleteClassroom(id);
+      await this.deleteClassroomCommandHandler.execute({ id });
       return sendResponse(res, 200, { message: "Classroom deleted successfully" });
     } catch (error: any) {
       if (error.message === "Classroom not found") return sendResponse(res, 404, null, error.message);
@@ -74,7 +104,7 @@ export class ClassroomController {
     try {
       const { id } = req.params;
       const { studentIds } = req.body;
-      const classroom = await this.classroomService.assignStudents(id, studentIds);
+      const classroom = await this.assignStudentsCommandHandler.execute({ id, studentIds });
       return sendResponse(res, 200, classroom);
     } catch (error: any) {
       if (error.message === "Classroom not found") return sendResponse(res, 404, null, error.message);
@@ -88,7 +118,7 @@ export class ClassroomController {
   removeStudent = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id, studentId } = req.params;
-      await this.classroomService.removeStudent(id, studentId);
+      await this.removeStudentCommandHandler.execute({ id, studentId });
       return sendResponse(res, 200, { message: "Student removed from classroom successfully" });
     } catch (error: any) {
       if (error.message.includes("not found")) return sendResponse(res, 404, null, error.message);
@@ -99,7 +129,7 @@ export class ClassroomController {
   getAvailableStudents = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const search = (req.query.search as string) || "";
-      const students = await this.classroomService.getAvailableStudents(search);
+      const students = await this.getAvailableStudentsQueryHandler.execute({ search });
       return sendResponse(res, 200, students);
     } catch (error: any) {
       return sendResponse(res, 500, null, error.message || "Failed to fetch available students");
@@ -113,7 +143,7 @@ export class ClassroomController {
       const limit = parseInt(req.query.limit as string) || 10;
       const upcoming = req.query.upcoming === "true";
 
-      const sessions = await this.classroomService.getClassroomSessions(id, page, limit, upcoming);
+      const sessions = await this.getClassroomSessionsQueryHandler.execute({ id, page, limit, upcoming });
       return sendResponse(res, 200, sessions);
     } catch (error: any) {
       return sendResponse(res, 500, null, error.message || "Failed to fetch classroom sessions");
@@ -123,7 +153,7 @@ export class ClassroomController {
   getSessionById = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { classroomId, sessionId } = req.params;
-      const session = await this.classroomService.getSessionById(classroomId, sessionId);
+      const session = await this.getSessionByIdQueryHandler.execute({ classroomId, sessionId });
       return sendResponse(res, 200, session);
     } catch (error: any) {
       if (error.message.includes("not found")) return sendResponse(res, 404, null, error.message);
@@ -135,7 +165,7 @@ export class ClassroomController {
     try {
       const { id } = req.params;
       const sessionData = { ...req.body, classroomId: id };
-      const session = await this.classroomService.createSession(sessionData);
+      const session = await this.createSessionCommandHandler.execute(sessionData);
       return sendResponse(res, 201, session, "Session created successfully");
     } catch (error: any) {
       if (error.message.includes("not found")) return sendResponse(res, 404, null, error.message);

@@ -1,16 +1,34 @@
 import { Request, Response } from "express";
-import { AttendanceService } from "../../application/services/AttendanceService";
-import { ClassroomService } from "../../application/services/ClassroomService"; // For creating classrooms
-import { sendResponse, handleValidationErrors } from "../../utils/response";
-import { AuthenticatedRequest } from "../../middleware/auth";
+import { RegisterStudentFaceCommandHandler } from "../../application/features/Attendance/commands/RegisterStudentFaceCommand";
+import { TeacherCheckinCommandHandler } from "../../application/features/Attendance/commands/TeacherCheckinCommand";
+import { UpdateSessionStatusCommandHandler } from "../../application/features/Attendance/commands/UpdateSessionStatusCommand";
+import { GetSessionAttendanceQueryHandler } from "../../application/features/Attendance/queries/GetSessionAttendanceQuery";
+import { GetClassroomAttendanceOverviewQueryHandler } from "../../application/features/Attendance/queries/GetClassroomAttendanceOverviewQuery";
+import { CreateClassroomCommandHandler } from "../../application/features/Classroom/commands/CreateClassroomCommand";
+import { GetClassroomsQueryHandler } from "../../application/features/Classroom/queries/GetClassroomsQuery";
+import { CreateSessionCommandHandler } from "../../application/features/Classroom/commands/CreateSessionCommand";
+import { sendResponse, handleValidationErrors } from "../utils/response";
+import { AuthenticatedRequest } from "../middleware/auth";
 
 export class AttendanceController {
-  private attendanceService: AttendanceService;
-  private classroomService: ClassroomService;
+  private registerStudentFaceCommandHandler: RegisterStudentFaceCommandHandler;
+  private teacherCheckinCommandHandler: TeacherCheckinCommandHandler;
+  private updateSessionStatusCommandHandler: UpdateSessionStatusCommandHandler;
+  private getSessionAttendanceQueryHandler: GetSessionAttendanceQueryHandler;
+  private getClassroomAttendanceOverviewQueryHandler: GetClassroomAttendanceOverviewQueryHandler;
+  private createClassroomCommandHandler: CreateClassroomCommandHandler;
+  private getClassroomsQueryHandler: GetClassroomsQueryHandler;
+  private createSessionCommandHandler: CreateSessionCommandHandler;
 
   constructor() {
-    this.attendanceService = new AttendanceService();
-    this.classroomService = new ClassroomService(); // To handle the duplicate routes in attendance.ts
+    this.registerStudentFaceCommandHandler = new RegisterStudentFaceCommandHandler();
+    this.teacherCheckinCommandHandler = new TeacherCheckinCommandHandler();
+    this.updateSessionStatusCommandHandler = new UpdateSessionStatusCommandHandler();
+    this.getSessionAttendanceQueryHandler = new GetSessionAttendanceQueryHandler();
+    this.getClassroomAttendanceOverviewQueryHandler = new GetClassroomAttendanceOverviewQueryHandler();
+    this.createClassroomCommandHandler = new CreateClassroomCommandHandler();
+    this.getClassroomsQueryHandler = new GetClassroomsQueryHandler();
+    this.createSessionCommandHandler = new CreateSessionCommandHandler();
   }
 
   registerStudentFace = async (req: AuthenticatedRequest, res: Response) => {
@@ -18,11 +36,11 @@ export class AttendanceController {
       if (handleValidationErrors(req as Request, res)) return;
 
       const { studentId, image } = req.body;
-      const { personId, hadExistingFace, student } = await this.attendanceService.registerStudentFace(
+      const { personId, hadExistingFace, student } = await this.registerStudentFaceCommandHandler.execute({
         studentId,
         image,
-        req.user!.id
-      );
+        teacherId: req.user!.id
+      });
 
       return sendResponse(res, 200, {
         message: hadExistingFace
@@ -46,7 +64,7 @@ export class AttendanceController {
   createClassroom = async (req: AuthenticatedRequest, res: Response) => {
     try {
       if (handleValidationErrors(req as Request, res)) return;
-      const classroom = await this.classroomService.createClassroom(req.body);
+      const classroom = await this.createClassroomCommandHandler.execute(req.body);
       return sendResponse(res, 201, classroom);
     } catch (error: any) {
       return sendResponse(res, 500, null, error.message || "Failed to create classroom");
@@ -57,7 +75,7 @@ export class AttendanceController {
     try {
       if (handleValidationErrors(req as Request, res)) return;
       // This route just expects active classrooms based on attendance.ts
-      const { classrooms } = await this.classroomService.getClassrooms(1, 1000, "", true);
+      const { classrooms } = await this.getClassroomsQueryHandler.execute({ page: 1, limit: 1000, search: "", isActive: true });
       return sendResponse(res, 200, classrooms);
     } catch (error: any) {
       return sendResponse(res, 500, null, error.message || "Failed to fetch classrooms");
@@ -75,7 +93,7 @@ export class AttendanceController {
         courseId: req.body.courseId,
         teacherId: req.user!.id,
       };
-      const session = await this.classroomService.createSession(sessionData);
+      const session = await this.createSessionCommandHandler.execute(sessionData);
       return sendResponse(res, 201, session);
     } catch (error: any) {
       if (error.message.includes("not found")) return sendResponse(res, 404, null, error.message);
@@ -87,8 +105,8 @@ export class AttendanceController {
     try {
       if (handleValidationErrors(req as Request, res)) return;
       const { sessionId } = req.params;
-      // Uses AttendanceService internal logic wrapper
-      const session = await this.attendanceService.getSessionAttendance(sessionId, req.user!.id);
+      // Uses QueryHandler
+      const session = await this.getSessionAttendanceQueryHandler.execute({ sessionId, teacherId: req.user!.id });
       return sendResponse(res, 200, session.session); // Adjust based on return
     } catch (error: any) {
       if (error.message.includes("not found")) return sendResponse(res, 404, null, error.message);
@@ -112,7 +130,7 @@ export class AttendanceController {
       if (handleValidationErrors(req as Request, res)) return;
       
       const { image } = req.body;
-      const result = await this.attendanceService.teacherCheckin(req.user!.id, image);
+      const result = await this.teacherCheckinCommandHandler.execute({ teacherId: req.user!.id, image });
       
       const responseData = {
         ...result.attendance,
@@ -135,7 +153,7 @@ export class AttendanceController {
       if (handleValidationErrors(req as Request, res)) return;
       const { sessionId } = req.params;
       
-      const result = await this.attendanceService.getSessionAttendance(sessionId, req.user!.id);
+      const result = await this.getSessionAttendanceQueryHandler.execute({ sessionId, teacherId: req.user!.id });
       
       const attendances = result.attendances;
       return sendResponse(res, 200, {
@@ -163,7 +181,7 @@ export class AttendanceController {
       const { sessionId } = req.params;
       const { isActive } = req.body;
       
-      const session = await this.attendanceService.updateSessionStatus(sessionId, req.user!.id, isActive);
+      const session = await this.updateSessionStatusCommandHandler.execute({ sessionId, teacherId: req.user!.id, isActive });
       return sendResponse(res, 200, session);
     } catch (error: any) {
       if (error.message.includes("not found")) return sendResponse(res, 404, null, error.message);
@@ -175,7 +193,7 @@ export class AttendanceController {
     try {
       if (handleValidationErrors(req as Request, res)) return;
       const { classroomId } = req.params;
-      const data = await this.attendanceService.getClassroomAttendanceOverview(classroomId);
+      const data = await this.getClassroomAttendanceOverviewQueryHandler.execute({ classroomId });
 
       // Formatting logic inside controller or service.
       // Assuming we need to replicate the complex summary logic...
