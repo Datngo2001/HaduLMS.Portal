@@ -2,7 +2,7 @@ import { AttendanceRepository } from "../../../../infrastructure/repositories/At
 import { ClassroomSessionRepository } from "../../../../infrastructure/repositories/ClassroomSessionRepository";
 import { UserRepository } from "../../../../infrastructure/repositories/UserRepository";
 import { FaceRecognitionFactory } from "../../../../services/faceRecognitionFactory";
-import { prisma } from "../../../../prismaClient";
+import { prisma } from "../../../../infrastructure/prismaClient";
 import { ICommandHandler } from "../../../core/ICommandHandler";
 
 export interface TeacherCheckinCommandRequest {

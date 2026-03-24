@@ -1,5 +1,5 @@
 import { Prisma, Enrollment } from "@prisma/client";
-import { prisma } from "../../prismaClient";
+import { prisma } from "../../infrastructure/prismaClient";
 
 export class EnrollmentRepository {
   async findMany(args: Prisma.EnrollmentFindManyArgs) {

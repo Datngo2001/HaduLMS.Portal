@@ -1,6 +1,6 @@
 import { PrismaMssql } from "@prisma/adapter-mssql";
 import bcrypt from "bcryptjs";
-import { UserRole } from "../presentation/middleware/auth";
+import { UserRole } from "../../presentation/middleware/auth";
 import { PrismaClient } from "./generated/client";
 
 const connectionString = process.env.DATABASE_URL;

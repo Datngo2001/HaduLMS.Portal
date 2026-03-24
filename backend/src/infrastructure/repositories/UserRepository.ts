@@ -1,5 +1,5 @@
 import { Prisma, User } from "@prisma/client";
-import { prisma } from "../../prismaClient";
+import { prisma } from "../../infrastructure/prismaClient";
 
 export class UserRepository {
   async findUnique(args: Prisma.UserFindUniqueArgs) {

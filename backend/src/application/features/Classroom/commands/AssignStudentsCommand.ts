@@ -1,6 +1,6 @@
 import { ClassroomRepository } from "../../../../infrastructure/repositories/ClassroomRepository";
 import { UserRepository } from "../../../../infrastructure/repositories/UserRepository";
-import { prisma } from "../../../../prismaClient";
+import { prisma } from "../../../../infrastructure/prismaClient";
 import { ICommandHandler } from "../../../core/ICommandHandler";
 import { GetClassroomByIdQueryHandler } from "../queries/GetClassroomByIdQuery";
 

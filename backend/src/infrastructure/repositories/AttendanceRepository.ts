@@ -1,5 +1,5 @@
 import { Prisma, Attendance } from "@prisma/client";
-import { prisma } from "../../prismaClient";
+import { prisma } from "../../infrastructure/prismaClient";
 
 export class AttendanceRepository {
   async findMany(args: Prisma.AttendanceFindManyArgs) {

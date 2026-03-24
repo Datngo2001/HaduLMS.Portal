@@ -129,3 +129,4 @@ prisma/migrations/
 !prisma/schema.prisma
 !prisma/seed.ts
 backend/src/prisma/generated/
+backend/src/infrastructure/prisma/generated/

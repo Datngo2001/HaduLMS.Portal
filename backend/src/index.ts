@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
-import { prisma } from "./prismaClient";
+import { prisma } from "./infrastructure/prismaClient";
 
 // Import routes
 import attendanceRoutes from "./presentation/routes/attendance";

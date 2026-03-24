@@ -48,7 +48,7 @@ export const authenticateToken = async (
       }
 
       // Check if user is still active in the database
-      const { prisma } = await import("../../prismaClient");
+      const { prisma } = await import("../../infrastructure/prismaClient");
       const dbUser = await prisma.user.findUnique({
         where: { id: user.id },
         select: { id: true, email: true, role: true, isActive: true },

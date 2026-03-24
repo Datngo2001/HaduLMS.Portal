@@ -1,5 +1,5 @@
 import { CourseRepository } from "../../../../infrastructure/repositories/CourseRepository";
-import { prisma } from "../../../../prismaClient";
+import { prisma } from "../../../../infrastructure/prismaClient";
 import { ICommandHandler } from "../../../core/ICommandHandler";
 
 export interface UpdateCourseCommandRequest {

@@ -1,5 +1,5 @@
 import { Prisma, Course } from "@prisma/client";
-import { prisma } from "../../prismaClient";
+import { prisma } from "../../infrastructure/prismaClient";
 
 export class CourseRepository {
   async findMany(args: Prisma.CourseFindManyArgs) {
